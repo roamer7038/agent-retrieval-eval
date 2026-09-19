@@ -151,7 +151,18 @@ PARA = """次の質問を、指定した語を使わずに言い換えてくだ�
 - 対象が何をするもの・何についてのものかを、説明をもとに日本語のふつうの言葉で書き、質問が尋ねていること（どのファイルか、どの関数か、いつか、なぜか、どうするか、など）と答えの対象の範囲は変えない。
 - 読んだ人が、答えを一つに決められるだけの手がかりを残す。
 - 日本語の 1〜2 文で。
-{feedback}JSON で答えてください。"""
+{extra}{feedback}JSON で答えてください。"""
+
+# Rules for some scenarios only, so that the prompts of the others (and
+# their cached answers) stay as they were. The sample check of PE2 found
+# paraphrases that carried the answer (S4, S5) or said the subject does not
+# exist (S8).
+PARA_EXTRA = {
+    "S4": "- 答え（理由）やその一部を質問の中に書かない。\n",
+    "S5": "- 答え（手順）やその一部を質問の中に書かない。\n",
+    "S8": "- 対象が架空であること・存在しないことを書かない（実在するものとして尋ねる）。\n",
+}
+NONEXIST = re.compile(r"架空|存在しない|実在しない|仮想の名前|hypothetical|fictional", re.I)
 
 
 PRODUCT_NAMES = {"wikictl", "grafana", "kubernetes", "linux", "wiki", "git", "go"}
@@ -174,13 +185,21 @@ def leaks(c, text):
         found.append("(backticks)")
     if re.search(r"[\w\-]+/[\w\-/]+\.\w+", text):
         found.append("(path)")
+    if c["scenario"] == "S8" and NONEXIST.search(text):
+        found.append("(says it does not exist)")
     return found
 
 
 def stage_para(c, feedback=""):
     idents = [x for x in c.get("identifiers", []) if x]
+    doc = (c.get("subject") or {}).get("doc", "")[:600]
+    if c["scenario"] == "S8":
+        # the subject does not exist: describing it from the real name's doc
+        # comment made every paraphrase ask about the real one
+        doc = (f"実在しない名前 `{c['subject']['label']}` の語の意味から想像される働き。"
+               f"実在する {c['subject']['real']} とは別の働きとして書き、その説明は使わない")
     prompt = PARA.format(q=c["q_ident"], idents=", ".join(idents) or "（なし）", task=c.get("paraphrase_task", ""),
-                         doc=(c.get("subject") or {}).get("doc", "")[:600],
+                         doc=doc, extra=PARA_EXTRA.get(c["scenario"], ""),
                          feedback=(f"前回の言い換えは次の理由で使えませんでした: {feedback}\n" if feedback else ""))
     j = llm.chat_json(llm.GEN_MODEL, prompt, schema=PARA_SCHEMA)
     q = (j or {}).get("question", "").strip()
@@ -263,14 +282,13 @@ def stage_judge(c, r):
 
 # ---------------------------------------------------------------- stages 5, 6
 
-TRANS = """次の日本語の質問 2 つと答えの形の指定を、英語に訳してください。
+TRANS = """次の JSON の 3 つの値（日本語）を英語に訳し、同じキーの JSON で返してください。
 
-質問 1（識別子を含む）: {qi}
-質問 2（言い換え）: {qp}
-答えの形: {fmt}
+{src}
 
+- question_identifier と question_paraphrase は質問文、answer_format は答えの形の指定。それぞれの値を訳文だけにし、「Question 1」のような見出しや説明を付けない。
 - バッククォートで囲んだ語、コードの名前、パス、コマンド、版は変えずにそのまま残す。
-- 質問 2 には、質問 1 にある識別子を足さない。
+- question_paraphrase には、question_identifier にある識別子を足さない。
 - 意味を足したり削ったりしない。自然な英語にする。
 JSON で答えてください。"""
 
@@ -292,8 +310,11 @@ JSON で答えてください。"""
 
 
 def stage_translate(c):
-    j = llm.chat_json(llm.CHECK_MODEL, TRANS.format(qi=c["q_ident"], qp=c["q_para"], fmt=c["answer_format"]),
-                      schema=TR_SCHEMA)
+    # the three texts go in as JSON under the keys they come back under:
+    # with labels such as "質問 1" in the prompt the model returned the labels
+    src = json.dumps({"question_identifier": c["q_ident"], "question_paraphrase": c["q_para"],
+                      "answer_format": c["answer_format"]}, ensure_ascii=False, indent=1)
+    j = llm.chat_json(llm.CHECK_MODEL, TRANS.format(src=src), schema=TR_SCHEMA)
     if not j:
         c["en"] = None
         return

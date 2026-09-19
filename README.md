@@ -50,7 +50,9 @@ ARE_DATA=... gen/run.sh dev       # 候補 → 言い換え・一意性の判定
 
 - 生成物（解析の結果、候補、LLM の応答のキャッシュ）は `$ARE_DATA/gold-work/` に置き、題材の作業ツリーには書かない。Linux は題材を読み取り専用でマウントしたコンテナの中で、別のディレクトリにビルドする。
 - 乱数は分割名（`dev`・`test`）と `gen/common.py` の `SEED` で決まり、項目の分割は項目の鍵のハッシュで決まる。本番用は事前登録の後に `gen/run.sh test` で同じ手順で作る。
-- 問題の各行は、識別子を含む質問と言い換えの対（`phrasing`）、英訳（`question_en`）、言語の組み合わせ（`lang`）、正解（`gold`）、根拠として認める範囲（`evidence`。末尾が `/` なら配下すべて）、正解の状態（`gold_status`: 抜き取りで監査する `machine`、人の確認が要る `needs_review`）を持つ。正解の種類は `grade/grade.py` の冒頭に書いた。
+- 問題の各行は、識別子を含む質問と言い換えの対（`phrasing`）、英訳（`question_en`）、言語の組み合わせ（`lang`）、正解（`gold`）、根拠として認める範囲（`evidence`。末尾が `/` なら配下すべて。何を根拠と認めるかの説明は `evidence_rule`）、正解の状態（`gold_status`: 抜き取りで監査する `machine`、人の確認が要る `needs_review`）、監査の結果（`audit`）を持つ。正解の種類は `grade/grade.py` の冒頭に書いた。
+- 監査の記録は `results/pe2-audit.jsonl`。最後の監査で正解の誤り（`error`）か問題として成り立たない（`invalid`）とされた候補は、`gen/build.py` が問題に入れない。
+- LLM 判定者の試作は `gen/judge.py`（S4・S5 の自由記述の採点と、S9 の正解の点検）。PE2 の結果は `results/pe2-gold.md`。
 
 ## ライセンス
 
