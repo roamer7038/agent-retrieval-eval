@@ -35,6 +35,7 @@ grade/summarize.py scores.jsonl
 ```
 
 - モデルは `local:<名前>`（Ollama の Anthropic 互換 API。事前実験だけに使う）か `anthropic:<sonnet|opus|haiku>`（`~/.config/agent-retrieval-eval/oauth-token` の OAuth トークン）。
+- 題材と索引は `data/`（`$ARE_DATA`）に置く。作業ツリーを複数使うときは、同じ `$ARE_DATA` を指して共有する。
 - 記録は `../agent-retrieval-eval-runs/`（`$ARE_RUNS`）に書く。Claude Code は上位のディレクトリにある Git リポジトリの状態をシステムプロンプトに入れるので、Git リポジトリの外に置く。トランスクリプトを含むので公開しない。
 - ローカル LLM の結果の `total_cost_usd` は、未知のモデルに仮の単価を当てた値なので使わない（採点では USD を出さない）。
 
