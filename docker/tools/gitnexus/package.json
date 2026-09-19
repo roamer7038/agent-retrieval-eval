@@ -1,0 +1,7 @@
+{
+  "name": "l0-gitnexus",
+  "private": true,
+  "dependencies": {
+    "gitnexus": "1.6.12"
+  }
+}
