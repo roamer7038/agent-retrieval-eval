@@ -31,7 +31,8 @@ PRICES = json.load(open(os.path.join(ROOT, "grade", "prices.json")))
 
 
 def norm_path(p, repo=None):
-    p = str(p).strip().strip("`").lstrip("./")
+    p = str(p).strip().strip("`")
+    p = re.sub(r"^(\./)+", "", p)
     p = re.sub(r"^/?corpus/", "", p)
     if repo and p.startswith(repo + "/"):
         p = p[len(repo) + 1:]
