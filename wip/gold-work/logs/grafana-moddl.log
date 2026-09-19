@@ -1,2 +1,0 @@
-go: downloading go1.26.6 (linux/amd64)
-go mod download  37.68s user 18.30s system 133% cpu 41.839 total
