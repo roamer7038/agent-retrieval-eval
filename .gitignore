@@ -1,0 +1,5 @@
+# Corpora, indexes and run records are made locally and never committed.
+/data/
+__pycache__/
+*.pyc
+.venv/
