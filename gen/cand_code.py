@@ -17,6 +17,7 @@ import collections
 import json
 import os
 import re
+import subprocess
 
 from common import CAND, CORPORA, OUT, read_jsonl, rng, split_of, write_jsonl
 
@@ -179,6 +180,35 @@ class CIndex:
 
     def indirect(self, d):
         return [r for r in self.refs if self.same_callee(r, d)]
+
+    def unseen_calls(self, d):
+        """Lines of .c files that call d by name but that the AST has no call
+        for: code the x86_64 defconfig build leaves out (a file outside the
+        build, a branch of #ifdef). A static function is looked for in its
+        own file, one with external linkage in every .c file. A candidate
+        with such lines is dropped, because its gold would miss callers."""
+        seen = {(c["file"], c["line"]) for c in self.calls_to.get(d["name"], []) if self.same_callee(c, d)}
+        pat = re.compile(rf"\b{re.escape(d['name'])}\s*\(")
+        if d.get("static"):
+            files = [d["file"]]
+        else:
+            files = subprocess.run(["git", "-C", os.path.join(CORPORA, "c3/linux"), "grep", "-lwF", d["name"],
+                                    "--", "*.c"], capture_output=True, text=True).stdout.split()
+        out = []
+        for f in files:
+            try:
+                lines = open(os.path.join(CORPORA, "c3/linux", f), errors="replace").read().split("\n")
+            except OSError:
+                continue
+            for i, line in enumerate(lines, 1):
+                t = line.strip()
+                if not pat.search(line) or t.startswith(("*", "/*", "//", "#define")):
+                    continue
+                if f == d["file"] and d["line"] <= i <= d["line"] + 2:
+                    continue  # the definition
+                if (f, i) not in seen:
+                    out.append((f, i))
+        return out
 
     def literal(self, d, call=True):
         """The name is written at the definition (not made by a macro such
@@ -356,7 +386,7 @@ def s3_go(corpus, split, n):
                 optional.pop(k)
         refs, cha = g.indirect(d["pkg"], d["id"])
         out.append(s3_item(corpus, split, "go", d, d["id"], d["kind"], depth, gold, refs, cha,
-                           scope="同じパッケージの中の" if corpus == "c2" else "", optional=optional))
+                           optional=optional))
     return out
 
 
@@ -381,12 +411,21 @@ def s3_c(split, n):
         l1 = c.direct_callers(d)
         if not 2 <= len(l1) <= 8:
             continue
+        if c.unseen_calls(d):
+            continue
         gold = dict(l1)
         if depth == 2:
             for key, cd in l1.items():
                 for x in c.def_by.get(cd["id"], []):
                     if x["file"] == cd["file"]:
+                        if c.unseen_calls(x):
+                            gold = None
+                            break
                         gold.update(c.direct_callers(x))
+                if gold is None:
+                    break
+            if gold is None:
+                continue
             gold.pop((d["file"], d["name"]), None)
             if len(gold) > 12 or len(gold) == len(l1):
                 continue
@@ -409,8 +448,11 @@ def s3_item(corpus, split, lang, d, ident, kind, depth, gold, refs, cha, scope="
         rel = "直接呼び出している"
     else:
         rel = "直接呼び出している関数と、それらを直接呼び出している関数（2 段まで）の"
-    q = (f"{repo} のソースコード（テストを除く）で、{scope}{what} を{rel}関数をすべて挙げよ。" if depth == 1 else
-         f"{repo} のソースコード（テストを除く）で、{scope}{what} を{rel}すべてを挙げよ。")
+    # Go: helpers for tests outside _test.go files (fakes, mocks) are code
+    # like any other, so the question names the files it leaves out
+    excl = "`_test.go` のファイルを除く" if lang == "go" else "テストを除く"
+    q = (f"{repo} のソースコード（{excl}）で、{scope}{what} を{rel}関数をすべて挙げよ。" if depth == 1 else
+         f"{repo} のソースコード（{excl}）で、{scope}{what} を{rel}すべてを挙げよ。")
     items = sorted({(f, i) for (f, i) in gold})
     return {
         "base_id": f"{split}-{corpus}-s3-{lang}-{ident.replace('.', '-')}-d{depth}",
@@ -469,7 +511,7 @@ def s7_go(corpus, split, n):
     out = []
     for kind, d, items in fams[:n]:
         if kind == "impl":
-            q = (f"{repo} のソースコード（テストを除く{'、pkg/ 以下' if corpus == 'c2' else ''}）で、インタフェース `{d['id']}`"
+            q = (f"{repo} のソースコード（`_test.go` のファイルを除く{'、pkg/ 以下' if corpus == 'c2' else ''}）で、インタフェース `{d['id']}`"
                  f"（{d['file']}）を満たす名前付きの型をすべて挙げよ。")
             fmt = "型の一覧。各要素は `ファイルのパス:型名`（パスはリポジトリの根から）"
             gold = {"type": "set", "match": "func", "repo": repo, "value": items}

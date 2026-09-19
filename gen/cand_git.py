@@ -202,7 +202,10 @@ def s6_c1_code(split, n):
     for d in pool:
         if len(out) == n:
             break
-        regex = rf"^func (\([^)]*\) )?{d['name']}[\[(]"
+        if d["recv"]:  # the receiver's type too: a name like Error is shared by many types
+            regex = rf"^func \(\w* ?\*?{d['recv']}(\[[^]]*\])?\) {d['name']}[\[(]"
+        else:
+            regex = rf"^func {d['name']}[\[(]"
         c = intro_commit("c1", "wikictl", regex, ["*.go"])
         if not c or defined_at("c1", "wikictl", c[0] + "^", regex):
             continue
@@ -212,7 +215,7 @@ def s6_c1_code(split, n):
         what = f"型 `{d['recv']}` のメソッド `{d['name']}`" if d["recv"] else f"関数 `{d['name']}`"
         out.append(s6_item("c1", split, f"code-{d['id'].replace('.', '-')}",
                            f"wikictl のソースコードに{what}が初めて含まれたリリースの版はどれか。",
-                           [d["id"], d["name"]], {"label": d["id"], "kind": d["kind"], "doc": d["doc"], "area": os.path.dirname(d["file"])},
+                           sorted({d["id"], d["name"]}), {"label": d["id"], "kind": d["kind"], "doc": d["doc"], "area": os.path.dirname(d["file"])},
                            "次の関数が初めて含まれたリリースの版を尋ねる質問", "版（例: `v0.3.0`）",
                            {"type": "version", "value": tag},
                            ["wikictl/" + d["file"], "wiki/projects/wikictl/releases/"],
@@ -238,6 +241,12 @@ def s6_pages(corpus, repo, split, n, root, lang_note):
         log = git(corpus, repo, "log", "--follow", "--diff-filter=A", "--format=%H%x09%ad", "--date=short", "--", f)
         rows = [l.split("\t") for l in log.splitlines()]
         if not rows:
+            continue
+        # --follow also walks through a copy (a Japanese page starts as a copy
+        # of the English one) and a rename, where "when was the page added"
+        # has two answers; keep only pages whose path itself was added there
+        plain = git(corpus, repo, "log", "--diff-filter=A", "--format=%H", "--", f).split()
+        if not plain or plain[-1] != rows[-1][0]:
             continue
         h, date = rows[-1]
         title = page_title(os.path.join(base, f))

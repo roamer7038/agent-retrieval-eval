@@ -298,25 +298,29 @@ def s7_docs(split, corpus, n):
         if kind == "count-type":
             q = f"wiki の `{p['dir']}/` 直下のページのうち、frontmatter の `type` が `{p['type']}` のものはいくつあるか。"
             gold, fmt = {"type": "int", "value": len(items)}, "整数"
-            ev, ids = [f"wiki/{p['dir']}/"], [p["dir"], p["type"]]
+            # the directory is the scope of the count, not a name to hide
+            ev, ids = [f"wiki/{p['dir']}/"], [p["type"]]
             ptask = "wiki のある場所にある、ある種類のページの数を尋ねる質問"
         elif kind == "count-adr":
             q = f"wiki の `{p['dir']}/` にある ADR（ファイル名が `adr-` で始まるもの）はいくつあるか。"
             gold, fmt = {"type": "int", "value": len(items)}, "整数"
-            ev, ids = [f"wiki/{p['dir']}/"], [p["dir"]]
+            ev, ids = [f"wiki/{p['dir']}/"], []
             ptask = "wiki のある場所にある設計判断の記録の数を尋ねる質問"
         elif kind == "gates":
-            q = (f"Kubernetes の文書の feature gate の一覧で、Kubernetes {p['version']} から `{p['stage']}` の段階に"
-                 f"なった feature gate をすべて挙げよ。")
+            q = (f"Kubernetes の文書に載っている feature gate（削除されたものを含む）のうち、Kubernetes {p['version']} から"
+                 f" `{p['stage']}` の段階になったものをすべて挙げよ。")
             gold, fmt = {"type": "set", "match": "name", "value": items}, "feature gate の名前の一覧"
-            ev, ids = [f"website/{p['dir']}/", "website/content/en/docs/reference/command-line-tools-reference/feature-gates.md"], [p["stage"], p["version"]]
+            ev, ids = [f"website/{p['dir']}/", "website/content/en/docs/reference/command-line-tools-reference/feature-gates-removed/"], \
+                [p["stage"]]  # the version is the condition of the question
             ptask = "ある版である段階になった Kubernetes の機能の切り替えをすべて挙げさせる質問"
         else:
             q = f"Kubernetes の文書の用語集（glossary）で、タグ `{p['tag']}` が付いている用語をすべて挙げよ。"
             gold, fmt = {"type": "set", "match": "name", "value": items}, "用語の id（ファイル名から .md を除いたもの）の一覧"
             ev, ids = [f"website/{p['dir']}/"], [p["tag"]]
             ptask = "Kubernetes の用語集で、ある分類に属する用語をすべて挙げさせる質問"
-        key = re.sub(r"[^A-Za-z0-9]+", "-", "-".join(str(v) for k, v in sorted(p.items()) if k != "dir"))[:60]
+        # the directory tells apart two counts of the same type in different places
+        key = re.sub(r"[^A-Za-z0-9]+", "-", "-".join(str(v) for k, v in sorted(p.items())
+                                                    if k != "dir" or kind.startswith("count")))[-60:].strip("-")
         out.append({
             "base_id": f"{split}-{corpus}-s7-{kind}-{key}", "corpus": corpus, "scenario": "S7", "split": split,
             "family": kind, "q_ident": q, "identifiers": ids,
