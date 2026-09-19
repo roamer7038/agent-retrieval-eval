@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Clone the pinned corpora of corpora/corpora.yaml into data/corpora.
+"""Clone the pinned corpora of corpora/corpora.yaml into $ARE_DATA/corpora
+(default data/corpora; several worktrees can share one $ARE_DATA).
 
     scripts/fetch_corpora.py [corpus ...]
 
@@ -13,7 +14,8 @@ import sys
 import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEST = os.path.join(ROOT, "data", "corpora")
+DATA = os.environ.get("ARE_DATA", os.path.join(ROOT, "data"))
+DEST = os.path.join(DATA, "corpora")
 
 
 def git(*args, cwd=None):

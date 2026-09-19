@@ -11,3 +11,24 @@ c1:
       url: https://github.com/roamer7038/wikictl-example-wiki.git
       commit: 7a2a5075af4c3a41fea773f1f996165ecb7860bd
       summary_ja: wikictl などについて書かれた wiki（日本語の Markdown）
+c2:
+  description: Grafana (Go and TypeScript) with its Markdown documentation in the same repository
+  repos:
+    grafana:
+      url: https://github.com/grafana/grafana.git
+      commit: 39703a2c01e37d6ef9f91147d1db29dd16c82611  # 2026-09-19
+      summary_ja: Grafana のソースコード（Go・TypeScript）と文書（英語の Markdown、docs/ 以下）
+c3:
+  description: Linux kernel (C) with reStructuredText documentation; indexing and retrieval only (L0, L1)
+  repos:
+    linux:
+      url: https://github.com/torvalds/linux.git
+      commit: 40288c9206c17eb66a603262e06a58d300d0f279  # 2026-09-18
+      summary_ja: Linux カーネルのソースコード（C）と文書（英語の reStructuredText、Documentation/ 以下）
+c4:
+  description: Kubernetes documentation (Markdown, English and translations)
+  repos:
+    website:
+      url: https://github.com/kubernetes/website.git
+      commit: 4aa397d928fb18affbda43d8d4126540dc9b3698  # 2026-09-19
+      summary_ja: Kubernetes の文書（Markdown。英語は content/en、日本語訳は content/ja）
