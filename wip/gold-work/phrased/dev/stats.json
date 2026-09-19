@@ -1,0 +1,20 @@
+{
+ "stats": {
+  "S1/c1": {
+   "candidates": 3,
+   "phrased": 3,
+   "first_round_keep": 3,
+   "first_round_leak": 0,
+   "translation_ok": 0
+  }
+ },
+ "llm": {
+  "calls": 12,
+  "cached": 0,
+  "seconds": 153.72680687904358
+ },
+ "models": {
+  "gen": "qwen3.8:27b",
+  "check": "gemma4:31b"
+ }
+}

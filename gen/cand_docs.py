@@ -1,0 +1,438 @@
+#!/usr/bin/env python3
+"""Candidates for the scenarios whose gold is a place in the documents: S4
+(design reasons), S5 (procedures), S7 on documents (enumerations from the
+frontmatter) and S9 (documents <-> code).
+
+    gen/cand_docs.py [--split dev] [--scenario S4,S5,S7,S9]
+
+S4 and S5 pick a section by its shape (a heading or words that mark a
+reason; a numbered list or shell commands) and leave the question and the
+key points to gen/phrase.py (written from the section by the local LLM) and
+to a person. S7 counts pages from the parsed YAML frontmatter. S9 links a
+term the documents write in backticks (a setting key, a rule name) to the Go
+files that hold the same string literal or struct tag (goanalyze
+-parse-only), and back.
+Output: gold-work/cand/<split>/S4.jsonl, S5.jsonl, S7-docs.jsonl, S9.jsonl
+"""
+import argparse
+import collections
+import os
+import re
+
+import yaml
+
+from common import CAND, OUT, read_jsonl, repo_dir, rng, split_of, write_jsonl
+
+FENCE = re.compile(r"^\s*(```|~~~)")
+HEAD = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
+
+
+def md_files(corpus, repo, roots, exclude=()):
+    base = repo_dir(corpus, repo)
+    out = []
+    for root in roots:
+        for dp, dn, fn in os.walk(os.path.join(base, root)):
+            dn[:] = sorted(x for x in dn if x != ".git")
+            for f in sorted(fn):
+                if f.endswith(".md"):
+                    rel = os.path.relpath(os.path.join(dp, f), base)
+                    if not any(re.search(e, rel) for e in exclude):
+                        out.append(rel)
+    return out
+
+
+def frontmatter(text):
+    if not text.startswith("---\n"):
+        return {}, 0
+    end = text.find("\n---", 4)
+    if end < 0:
+        return {}, 0
+    try:
+        fm = yaml.safe_load(text[4:end]) or {}
+    except yaml.YAMLError:
+        fm = {}
+    return (fm if isinstance(fm, dict) else {}), text[:end + 4].count("\n") + 1
+
+
+def sections(corpus, repo, path):
+    """Sections of a Markdown file: heading, level, 1-based line range,
+    body text. Headings inside code fences are not headings."""
+    text = open(os.path.join(repo_dir(corpus, repo), path), errors="replace").read()
+    fm, skip = frontmatter(text)
+    lines = text.split("\n")
+    secs, cur, fence = [], None, False
+    for i, line in enumerate(lines, 1):
+        if i <= skip:
+            continue
+        if FENCE.match(line):
+            fence = not fence
+        m = None if fence else HEAD.match(line)
+        if m:
+            if cur:
+                cur["end"] = i - 1
+                secs.append(cur)
+            cur = {"file": path, "level": len(m.group(1)), "heading": m.group(2), "line": i, "body": []}
+        elif cur:
+            cur["body"].append(line)
+    if cur:
+        cur["end"] = len(lines)
+        secs.append(cur)
+    for s in secs:
+        s["text"] = "\n".join(s["body"]).strip()
+        del s["body"]
+    return fm, secs
+
+
+def counterpart(path):
+    """The English page of a Japanese kubernetes/website page, and back."""
+    if path.startswith("content/ja/"):
+        return "content/en/" + path[len("content/ja/"):]
+    if path.startswith("content/en/"):
+        return "content/ja/" + path[len("content/en/"):]
+    return None
+
+
+def exists(corpus, repo, path):
+    return path and os.path.exists(os.path.join(repo_dir(corpus, repo), path))
+
+
+def base_item(split, corpus, scen, key, repo, sec, extra):
+    ev = [f"{repo}/{sec['file']}"]
+    cp = counterpart(sec["file"]) if corpus == "c4" else None
+    if cp and exists(corpus, repo, cp):
+        ev.append(f"{repo}/{cp}")
+    item = {
+        "base_id": f"{split}-{corpus}-{scen.lower()}-{key}",
+        "corpus": corpus, "scenario": scen, "split": split,
+        "section": {"repo": repo, "file": sec["file"], "heading": sec["heading"], "lines": [sec["line"], sec["end"]]},
+        "evidence_accept": ev,
+    }
+    item.update(extra)
+    return item
+
+
+# ---------------------------------------------------------------- S5
+
+STEP = re.compile(r"^\s{0,3}\d+\.\s+\S")
+SHELL = re.compile(r"^\s*(\$ |wikictl |git |kubectl |grafana |docker |helm |curl |sudo |make |go |npm |yarn |kubeadm )")
+
+
+def is_procedure(sec, min_steps):
+    lines = sec["text"].split("\n")
+    steps = sum(1 for l in lines if STEP.match(l))
+    cmds = sum(1 for l in lines if SHELL.match(l))
+    return steps >= min_steps or (cmds >= 2 and steps >= 1), steps, cmds
+
+
+S5_POOLS = {
+    "c1": ("wiki", ["projects", "global", "machines"], [r"/raw/"], 2),
+    "c2": ("grafana", ["docs/sources"], [r"/whatsnew/", r"/shared/", r"/release-notes/"], 3),
+    "c4": ("website", ["content/ja/docs/tasks", "content/ja/docs/setup"], [], 3),
+}
+
+
+def s5(split, corpus, n):
+    repo, roots, excl, min_steps = S5_POOLS[corpus]
+    pool = []
+    for f in md_files(corpus, repo, roots, excl):
+        _, secs = sections(corpus, repo, f)
+        for s in secs:
+            ok, steps, cmds = is_procedure(s, min_steps)
+            if ok and 200 <= len(s["text"]) <= 6000:
+                pool.append(dict(s, steps=steps, cmds=cmds))
+    pool = [s for s in pool if split_of(f"{corpus}:S5:{s['file']}:{s['heading']}") == split]
+    r = rng(split, "S5", corpus)
+    r.shuffle(pool)
+    out, files = [], set()
+    for s in pool:
+        if len(out) == n:
+            break
+        if s["file"] in files:
+            continue  # one section per page
+        files.add(s["file"])
+        key = re.sub(r"[^A-Za-z0-9]+", "-", s["file"][:-3])[-50:] + f"-L{s['line']}"
+        out.append(base_item(split, corpus, "S5", key, repo, s, {
+            "qgen": {"kind": "procedure", "text": s["text"][:3500], "heading": s["heading"]},
+            "answer_format": "手順の要点を箇条書きで（コマンドや設定の名前はそのまま）",
+            "gold": {"type": "rubric", "points": None,
+                     "ref": [{"repo": repo, "file": s["file"], "lines": [s["line"], s["end"]]}]},
+            "review": {"required": True,
+                       "check": "質問が節の手順を一意に指すか。要点（LLM が節から抜き出したもの）が正しく、過不足が無いか。"
+                                "同じ手順を書いた別の節・ページが無いか（あれば根拠の範囲に足す）",
+                       "machine_flags": {"steps": s["steps"], "commands": s["cmds"]}},
+            "source": {"method": "numbered list / shell commands in a Markdown section"},
+        }))
+    return out
+
+
+# ---------------------------------------------------------------- S4
+
+REASON_HEAD = re.compile(r"(?i)(理由|なぜ|背景|why|motivation|rationale|decision|context|決定)")
+REASON_TEXT = re.compile(r"(?i)(理由は|ため、|ためである|because|the reason|rationale|so that|in order to|this is why)")
+
+
+def s4(split, corpus, n):
+    r = rng(split, "S4", corpus)
+    pool = []
+    if corpus == "c1":
+        for f in md_files("c1", "wiki", ["projects"], [r"/raw/"]):
+            _, secs = sections("c1", "wiki", f)
+            for s in secs:
+                adr = "/decisions/adr-" in f
+                if (adr and re.search(r"(?i)^(context|decision|決定|背景|理由)", s["heading"])) or \
+                        (not adr and REASON_HEAD.search(s["heading"]) and REASON_TEXT.search(s["text"])):
+                    if 80 <= len(s["text"]) <= 4000:
+                        pool.append(("wiki", s, None))
+    elif corpus == "c2":
+        for f in md_files("c2", "grafana", ["contribute", "docs/sources"], [r"/whatsnew/", r"/release-notes/"]):
+            _, secs = sections("c2", "grafana", f)
+            for s in secs:
+                if REASON_TEXT.search(s["text"]) and (REASON_HEAD.search(s["heading"]) or
+                                                      len(REASON_TEXT.findall(s["text"])) >= 2):
+                    if 200 <= len(s["text"]) <= 4000:
+                        pool.append(("grafana", s, None))
+        # design reasons written in Go doc comments
+        seen = set()
+        for d in read_jsonl(os.path.join(OUT, "c2-go.jsonl")):
+            if d["rec"] != "def" or d["test"] or not d["file"].startswith("pkg/"):
+                continue
+            if (d["file"], d["line"]) in seen:
+                continue
+            seen.add((d["file"], d["line"]))
+            if re.search(r"(?i)\b(because|the reason|so that|in order to|we (do|use|chose|need))\b", d["doc"]) \
+                    and len(d["doc"]) >= 150 and not re.search(r"/(testing|test|tests|fakes?|mocks?)/", d["file"]):
+                s = {"file": d["file"], "heading": d["id"], "line": d["line"], "end": d["end"], "text": d["doc"]}
+                pool.append(("grafana", s, "code"))
+    elif corpus == "c4":
+        for f in md_files("c4", "website", ["content/ja/docs"]):
+            _, secs = sections("c4", "website", f)
+            for s in secs:
+                if (REASON_HEAD.search(s["heading"]) or len(REASON_TEXT.findall(s["text"])) >= 2) and \
+                        REASON_TEXT.search(s["text"]) and 200 <= len(s["text"]) <= 4000:
+                    pool.append(("website", s, None))
+    pool = [p for p in pool if split_of(f"{corpus}:S4:{p[1]['file']}:{p[1]['heading']}") == split]
+    r.shuffle(pool)
+    out, files = [], set()
+    want_code = 3 if corpus == "c2" else 0
+    for repo, s, kind in pool:
+        if len(out) == n:
+            break
+        if s["file"] in files:
+            continue
+        ncode = sum(1 for o in out if o["qgen"].get("where") == "code")
+        if corpus == "c2" and kind == "code" and ncode >= want_code:
+            continue
+        if corpus == "c2" and kind is None and len(out) - ncode >= n - want_code:
+            continue
+        files.add(s["file"])
+        key = re.sub(r"[^A-Za-z0-9]+", "-", s["file"])[-50:] + f"-L{s['line']}"
+        out.append(base_item(split, corpus, "S4", key, repo, s, {
+            "qgen": {"kind": "reason", "text": s["text"][:3500], "heading": s["heading"], "where": kind or "doc"},
+            "answer_format": "理由を 1〜3 文で",
+            "gold": {"type": "rubric", "points": None,
+                     "ref": [{"repo": repo, "file": s["file"], "lines": [s["line"], s["end"]]}]},
+            "review": {"required": True,
+                       "check": "質問が設計の理由を問うもので、節の記述だけから答えられるか。要点が理由を正しく表すか。"
+                                "理由を別の場所（ADR・リリースノート・コミット）にも書いていれば根拠の範囲に足す",
+                       "machine_flags": {"where": kind or "doc"}},
+            "source": {"method": "reason heading or reason words in a section / Go doc comment"},
+        }))
+    return out
+
+
+# ---------------------------------------------------------------- S7 (documents)
+
+def s7_docs(split, corpus, n):
+    r = rng(split, "S7", corpus, "docs")
+    fams = []
+    if corpus == "c1":
+        for f in md_files("c1", "wiki", ["."]):
+            pass
+        pages = {}
+        for f in md_files("c1", "wiki", ["projects", "global", "machines"]):
+            fm, _ = frontmatter(open(os.path.join(repo_dir("c1", "wiki"), f), errors="replace").read())
+            pages[f] = fm
+        by_dir_type = collections.defaultdict(list)
+        for f, fm in pages.items():
+            if fm.get("type"):
+                by_dir_type[(os.path.dirname(f), fm["type"])].append(f)
+        for (d, t), fs in by_dir_type.items():
+            if 3 <= len(fs) <= 30:
+                fams.append(("count-type", {"dir": d, "type": t}, sorted(fs)))
+        adr = collections.defaultdict(list)
+        for f in pages:
+            if re.search(r"/decisions/adr-\d+", f):
+                adr[os.path.dirname(f)].append(f)
+        for d, fs in adr.items():
+            fams.append(("count-adr", {"dir": d}, sorted(fs)))
+    elif corpus == "c4":
+        gates_dir = "content/en/docs/reference/command-line-tools-reference/feature-gates"
+        gates = {}
+        for f in md_files("c4", "website", [gates_dir]):
+            if f.endswith("_index.md"):
+                continue
+            fm, _ = frontmatter(open(os.path.join(repo_dir("c4", "website"), f), errors="replace").read())
+            if fm.get("stages"):
+                gates[fm.get("title") or os.path.basename(f)[:-3]] = (f, fm["stages"])
+        by_ver = collections.defaultdict(list)
+        for name, (f, stages) in gates.items():
+            for st in stages:
+                v = str(st.get("fromVersion", ""))
+                by_ver[(st.get("stage"), v)].append(name)
+        for (stage, v), names in by_ver.items():
+            if stage in ("alpha", "beta", "stable", "deprecated") and 3 <= len(names) <= 25:
+                fams.append(("gates", {"stage": stage, "version": v, "dir": gates_dir}, sorted(names)))
+        gl = {}
+        gdir = "content/en/docs/reference/glossary"
+        for f in md_files("c4", "website", [gdir]):
+            fm, _ = frontmatter(open(os.path.join(repo_dir("c4", "website"), f), errors="replace").read())
+            for t in fm.get("tags") or []:
+                gl.setdefault(t, []).append(fm.get("id") or os.path.basename(f)[:-3])
+        for t, ids in gl.items():
+            if 3 <= len(ids) <= 20:
+                fams.append(("glossary", {"tag": t, "dir": gdir}, sorted(ids)))
+    fams = [f for f in fams if split_of(f"{corpus}:S7d:{f[0]}:{sorted(f[1].items())}") == split]
+    r.shuffle(fams)
+    out = []
+    for kind, p, items in fams[:n]:
+        if kind == "count-type":
+            q = f"wiki の `{p['dir']}/` 直下のページのうち、frontmatter の `type` が `{p['type']}` のものはいくつあるか。"
+            gold, fmt = {"type": "int", "value": len(items)}, "整数"
+            ev, ids = [f"wiki/{p['dir']}/"], [p["dir"], p["type"]]
+            ptask = "wiki のある場所にある、ある種類のページの数を尋ねる質問"
+        elif kind == "count-adr":
+            q = f"wiki の `{p['dir']}/` にある ADR（ファイル名が `adr-` で始まるもの）はいくつあるか。"
+            gold, fmt = {"type": "int", "value": len(items)}, "整数"
+            ev, ids = [f"wiki/{p['dir']}/"], [p["dir"]]
+            ptask = "wiki のある場所にある設計判断の記録の数を尋ねる質問"
+        elif kind == "gates":
+            q = (f"Kubernetes の文書の feature gate の一覧で、Kubernetes {p['version']} から `{p['stage']}` の段階に"
+                 f"なった feature gate をすべて挙げよ。")
+            gold, fmt = {"type": "set", "match": "name", "value": items}, "feature gate の名前の一覧"
+            ev, ids = [f"website/{p['dir']}/", "website/content/en/docs/reference/command-line-tools-reference/feature-gates.md"], [p["stage"], p["version"]]
+            ptask = "ある版である段階になった Kubernetes の機能の切り替えをすべて挙げさせる質問"
+        else:
+            q = f"Kubernetes の文書の用語集（glossary）で、タグ `{p['tag']}` が付いている用語をすべて挙げよ。"
+            gold, fmt = {"type": "set", "match": "name", "value": items}, "用語の id（ファイル名から .md を除いたもの）の一覧"
+            ev, ids = [f"website/{p['dir']}/"], [p["tag"]]
+            ptask = "Kubernetes の用語集で、ある分類に属する用語をすべて挙げさせる質問"
+        key = re.sub(r"[^A-Za-z0-9]+", "-", "-".join(str(v) for k, v in sorted(p.items()) if k != "dir"))[:60]
+        out.append({
+            "base_id": f"{split}-{corpus}-s7-{kind}-{key}", "corpus": corpus, "scenario": "S7", "split": split,
+            "family": kind, "q_ident": q, "identifiers": ids,
+            "subject": {"label": key, "kind": kind, "doc": str(p), "area": p.get("dir", "")},
+            "paraphrase_task": ptask, "answer_format": fmt, "gold": gold, "evidence_accept": ev,
+            "review": {"required": False, "sample": True,
+                       "check": "frontmatter の解釈（段階の版の書き方、タグの表記揺れ）と、対象の範囲（直下か再帰か）"},
+            "source": {"method": "YAML frontmatter parsed with PyYAML"},
+        })
+    return out
+
+
+# ---------------------------------------------------------------- S9
+
+def lits(corpus):
+    by = collections.defaultdict(set)
+    for r in read_jsonl(os.path.join(OUT, f"{corpus}-go-parse.jsonl")):
+        if r["rec"] == "lit" and not r["file"].endswith("_test.go") and "/testdata/" not in r["file"]:
+            by[r["value"]].add(r["file"])
+    return by
+
+
+def s9(split, corpus, n):
+    r = rng(split, "S9", corpus)
+    by = lits(corpus)
+    pool = []
+    if corpus == "c1":
+        repo, code_repo = "wiki", "wikictl"
+        files = md_files("c1", "wiki", ["projects/wikictl"])
+        mentions = collections.defaultdict(list)
+        for f in files:
+            _, secs = sections("c1", "wiki", f)
+            for s in secs:
+                for t in set(re.findall(r"`([a-z][a-z0-9_.]{3,40})`", s["text"])):
+                    mentions[t].append(s)
+        for t, secs in mentions.items():
+            code = sorted(by.get(t, ()))
+            if 1 <= len(code) <= 3 and ("_" in t or "." in t):
+                pool.append((t, secs, code))
+    else:
+        repo, code_repo = "grafana", "grafana"
+        f = "docs/sources/setup-grafana/configure-grafana/_index.md"
+        _, secs = sections("c2", "grafana", f)
+        parent = None
+        docs_text = {}
+        for g in md_files("c2", "grafana", ["docs/sources"], [r"/whatsnew/", r"/release-notes/"]):
+            docs_text[g] = open(os.path.join(repo_dir("c2", "grafana"), g), errors="replace").read()
+        for s in secs:
+            if s["level"] == 3:
+                m = re.fullmatch(r"`\[([a-z0-9_.\-]+)\]`", s["heading"])
+                parent = m.group(1) if m else None
+            if s["level"] == 4 and parent and re.fullmatch(r"`[a-z][a-z0-9_]{3,50}`", s["heading"]):
+                t = s["heading"].strip("`")
+                code = sorted(x for x in by.get(t, ()) if x.startswith("pkg/"))
+                if 1 <= len(code) <= 3 and len(s["text"]) >= 60:
+                    # every documentation page that writes the key in backticks
+                    pages = [dict(s, parent=parent)] + [
+                        {"file": g, "line": 1, "end": 1, "heading": "", "text": ""}
+                        for g, txt in sorted(docs_text.items()) if g != f and f"`{t}`" in txt]
+                    pool.append((t, pages, code))
+    pool = [p for p in pool if split_of(f"{corpus}:S9:{p[0]}") == split]
+    r.shuffle(pool)
+    out = []
+    for i, (t, secs, code) in enumerate(pool[:n]):
+        s = secs[0]
+        direction = "doc2code" if i % 2 == 0 else "code2doc"
+        key = re.sub(r"[^A-Za-z0-9]+", "-", t) + "-" + direction
+        pages = sorted({x["file"] for x in secs})
+        if direction == "doc2code":
+            where = f"wiki の `{s['file']}`" if corpus == "c1" else f"Grafana の設定の文書（`{s['file']}`）の `[{s.get('parent', '')}]` の節"
+            q = f"{where} で説明されている `{t}` を、{code_repo} のソースコードのどのファイルが扱っているか。"
+            gold = {"type": "files", "repo": code_repo, "value": code}
+            ev = [f"{code_repo}/{c}" for c in code]
+            fmt = f"{code_repo} リポジトリの根からのファイルのパスの一覧"
+            ptask = "文書で説明されている次の設定・項目を、ソースコードのどのファイルが扱っているかを尋ねる質問"
+        else:
+            q = f"{code_repo} のソースコード（`{code[0]}`）で扱っている `{t}` について説明している文書のページはどれか。"
+            gold = {"type": "files", "repo": repo, "value": pages, "match": "any"}
+            ev = [f"{repo}/{p}" for p in pages]
+            fmt = f"{repo} の根からの文書のページのパスの一覧"
+            ptask = "ソースコードで扱っている次の設定・項目について説明している文書のページを尋ねる質問"
+        item = base_item(split, corpus, "S9", key, repo, s, {
+            "direction": direction, "q_ident": q, "identifiers": [t, s["file"]] + code,
+            "subject": {"label": t, "kind": "term", "doc": s["text"][:600], "area": s["heading"]},
+            "paraphrase_task": ptask, "answer_format": fmt, "gold": gold,
+            "review": {"required": True,
+                       "check": "文書の記述とコードの対応が正しいか（同じ文字列でも別の意味で使っていないか）。"
+                                "正解のファイルの過不足（文字列を持つファイルでなく、処理を実装するファイルを足す）"},
+            "source": {"method": "backticked term in a document == Go string literal / struct tag (go/parser)",
+                       "code_files": code, "doc_sections": [(x["file"], x["line"]) for x in secs][:10]},
+        })
+        item["evidence_accept"] = ev
+        out.append(item)
+    return out
+
+
+N = {"S4": {"c1": 8, "c2": 6, "c4": 6}, "S5": {"c1": 6, "c2": 6, "c4": 8}, "S7": {"c1": 4, "c4": 5},
+     "S9": {"c1": 8, "c2": 8}}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--split", default="dev")
+    ap.add_argument("--scenario", default="S4,S5,S7,S9")
+    a = ap.parse_args()
+    d = os.path.join(CAND, a.split)
+    sc = a.scenario.split(",")
+    for s, fn, name in (("S4", s4, "S4.jsonl"), ("S5", s5, "S5.jsonl"), ("S7", s7_docs, "S7-docs.jsonl"),
+                        ("S9", s9, "S9.jsonl")):
+        if s in sc:
+            rows = []
+            for c, k in N[s].items():
+                rows += fn(a.split, c, k)
+            write_jsonl(os.path.join(d, name), rows)
+            print(s, collections.Counter(r["corpus"] for r in rows))
+
+
+if __name__ == "__main__":
+    main()

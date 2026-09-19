@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Grade sessions and extract their cost and time.
 
-    grade/grade.py <session dir or label dir>... > scores.jsonl
+    grade/grade.py [--judgments judged.jsonl] <session dir or label dir>... > scores.jsonl
 
 One line per session: correctness of the answer, whether the evidence names a
 gold file, tokens and USD from the result event, tool calls from the stream,
@@ -14,8 +14,27 @@ Gold types:
   int       the answer is this integer
   keywords  the answer contains every keyword
   null      the corpus has no answer; the answer must be null
+  date      the answer starts with this date ("YYYY-MM" or "YYYY-MM-DD")
+  set       the answer is a list; precision, recall and F1 against "value",
+            correct when the sets are equal. "match" says how an item is
+            compared: "name" (the string), "func" ("<path>:<name>", where the
+            answer may leave out the path or the receiver when the name alone
+            is unambiguous within the gold). Items in "optional" are
+            accepted without being required
+  files     the answer is a list of paths; precision, recall and F1. With
+            "match": "any", correct when one gold file is named; otherwise
+            correct when every gold file is named
+  rubric    free text judged against "points" by the LLM judge (and people):
+            correct is null here and filled from --judgments (lines of
+            {"session", "correct"})
+
+Evidence: "evidence" is a list of paths relative to /corpus. A path that ends
+with "/" accepts every file under it, and a path may be a glob (fnmatch). A
+question with an empty list has no evidence to check.
 """
+import argparse
 import csv
+import fnmatch
 import json
 import os
 import re
@@ -39,7 +58,80 @@ def norm_path(p, repo=None):
     return p
 
 
+def as_list(answer):
+    if answer is None:
+        return []
+    if isinstance(answer, list):
+        return [str(a) for a in answer]
+    return [a for a in re.split(r"[\n,]+", str(answer)) if a.strip()]
+
+
+def func_key(item, repo):
+    """(path or None, name) of "<path>:<name>" / "<name>"; the receiver of a
+    method stays in the name."""
+    item = str(item).strip().strip("`").strip()
+    item = re.sub(r"\(\)$", "", item)
+    if ":" in item:
+        path, name = item.rsplit(":", 1)
+        return norm_path(path, repo), name.strip()
+    return None, item
+
+
+def func_match(a, keys, repo, taken):
+    path, name = func_key(a, repo)
+    for i, (gp, gn) in enumerate(keys):
+        if i in taken:
+            continue
+        same_name = name == gn or (("." in gn) and name == gn.split(".", 1)[1]
+                                   and sum(1 for _, n in keys if n.split(".")[-1] == name) == 1)
+        if same_name and (path is None or path == gp):
+            return i
+    return None
+
+
+def set_scores(answer, gold):
+    """Items in "optional" (callers through a function pointer or an
+    interface, for S3) are neither required nor counted against precision."""
+    got = as_list(answer)
+    value = gold["value"]
+    optional = gold.get("optional") or []
+    if gold.get("match") == "func":
+        keys = [func_key(v, gold.get("repo")) for v in value]
+        okeys = [func_key(v, gold.get("repo")) for v in optional]
+        matched, hit, extra = set(), 0, []
+        for a in got:
+            i = func_match(a, keys, gold.get("repo"), matched)
+            if i is not None:
+                matched.add(i)
+                hit += 1
+            elif func_match(a, okeys, gold.get("repo"), set()) is None:
+                extra.append(a)
+        tp = hit
+        got = [None] * hit + extra
+    else:
+        gs = {str(v).strip() for v in value}
+        norm = {a.strip().strip("`") for a in got} - {str(v).strip() for v in optional}
+        tp = len(norm & gs)
+        got = list(norm)
+    p = tp / len(got) if got else 0.0
+    r = tp / len(value) if value else 0.0
+    f1 = 2 * p * r / (p + r) if p + r else 0.0
+    return {"precision": round(p, 4), "recall": round(r, 4), "f1": round(f1, 4)}, tp == len(value) == len(got)
+
+
+def files_scores(answer, gold):
+    got = {norm_path(a, gold.get("repo")) for a in as_list(answer)}
+    value = set(gold["value"])
+    tp = len(got & value)
+    p = tp / len(got) if got else 0.0
+    r = tp / len(value) if value else 0.0
+    f1 = 2 * p * r / (p + r) if p + r else 0.0
+    ok = tp >= 1 if gold.get("match") == "any" else tp == len(value)
+    return {"precision": round(p, 4), "recall": round(r, 4), "f1": round(f1, 4)}, ok
+
+
 def correct(answer, gold):
+    """True/False, or None when a judge has to decide (rubric)."""
     t = gold["type"]
     if t == "null":
         return answer is None
@@ -51,12 +143,39 @@ def correct(answer, gold):
         return str(answer).strip().lstrip("vV") == str(gold["value"]).lstrip("vV")
     if t == "int":
         try:
-            return int(str(answer).strip()) == gold["value"]
+            return int(str(answer).strip().lstrip("#")) == gold["value"]
         except ValueError:
             return False
     if t == "keywords":
         return all(k in str(answer) for k in gold["value"])
+    if t == "date":
+        return str(answer).strip().startswith(gold["value"])
+    if t == "set":
+        return set_scores(answer, gold)[1]
+    if t == "files":
+        return files_scores(answer, gold)[1]
+    if t == "rubric":
+        return None
     raise ValueError(f"unknown gold type {t}")
+
+
+def partial(answer, gold):
+    if gold["type"] == "set":
+        return set_scores(answer, gold)[0]
+    if gold["type"] == "files":
+        return files_scores(answer, gold)[0]
+    return None
+
+
+def evidence_hit(evidence, accept):
+    """Whether one of the answer's evidence paths falls in the accepted range."""
+    for e in evidence:
+        for a in accept:
+            if a.endswith("/") and e.startswith(a):
+                return True
+            if e == a or fnmatch.fnmatchcase(e, a):
+                return True
+    return False
 
 
 def stream_stats(path):
@@ -111,7 +230,7 @@ def commands(path):
     return out
 
 
-def grade(d, qs):
+def grade(d, qs, judged=None):
     meta = json.load(open(os.path.join(d, "meta.json")))
     q = qs[meta["question"]]
     row = {k: meta[k] for k in ("session", "label", "question", "corpus", "scenario", "phrasing", "cond",
@@ -123,10 +242,14 @@ def grade(d, qs):
         ans, row["answer_valid"] = {}, False
     answer = ans.get("answer") if row["answer_valid"] else None
     row["answer"] = answer
-    row["correct"] = row["answer_valid"] and correct(answer, q["gold"])
+    c = correct(answer, q["gold"]) if row["answer_valid"] else False
+    if c is None and judged is not None:
+        c = judged.get(meta["session"])
+    row["correct"] = c
+    row["partial"] = partial(answer, q["gold"]) if row["answer_valid"] else None
     evidence = {norm_path(e) for e in (ans.get("evidence") or [])} if row["answer_valid"] else set()
-    gold_ev = set(q.get("evidence", []))
-    row["evidence_hit"] = bool(evidence & gold_ev) if gold_ev else None
+    gold_ev = q.get("evidence", [])
+    row["evidence_hit"] = evidence_hit(evidence, gold_ev) if gold_ev else None
     tools, result = stream_stats(os.path.join(d, "stream.jsonl"))
     row["tool_calls"] = tools
     row["turns"] = result.get("num_turns") if result else None
@@ -154,9 +277,16 @@ def sessions(paths):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--judgments", help="JSON lines of {session, correct} for rubric questions")
+    ap.add_argument("paths", nargs="+")
+    a = ap.parse_args()
+    judged = None
+    if a.judgments:
+        judged = {j["session"]: j["correct"] for j in map(json.loads, open(a.judgments)) if "session" in j}
     qs = load_questions()
-    for d in sessions(sys.argv[1:]):
-        print(json.dumps(grade(d, qs), ensure_ascii=False))
+    for d in sessions(a.paths):
+        print(json.dumps(grade(d, qs, judged), ensure_ascii=False))
 
 
 if __name__ == "__main__":

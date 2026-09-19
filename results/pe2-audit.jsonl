@@ -1,0 +1,228 @@
+{"base_id": "dev-c1-s1-go-scalarSpan", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-Lint", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-AddAlias", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-movedError", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-Repo-Entries", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-FoldPattern", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-newFlagSet", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c1-s1-go-Repo-runGit", "scenario": "S1", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-go-ReceiverService-GetReceiver", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-go-snapshotSelectFn", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-go-EncryptionManager-dataKeyById", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-go-KeyValFromMap", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-go-TokensREST-handleCreate", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-ts-buildTemplateContextData", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-ts-registerEchoBackend", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-ts-getChromeHeaderLevelHeight", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-ts-isFreeTierLicense", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c2-s1-ts-preInitTasks", "scenario": "S1", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-gov_update_cpu_data", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-devm_release_resource", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-device_is_bound", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-gen9_set_dc_state", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-mpihelp_cmp", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-device_wakeup_arm_wake_irqs", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-drm_panel_put", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-acpi_ut_delete_address_lists", "scenario": "S1", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "定義の位置と、同名の定義が他に無いことを git grep で確認"}
+{"base_id": "dev-c3-s1-c-acpi_set_current_resources", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-rdmacg_unregister_device", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-acpi_bus_trim", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-init_srcu_struct_fast_updown", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-acpi_power_state_string", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-acpi_ut_allocate_owner_id", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-disable_irq_nosync", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c3-s1-c-acpi_ps_cleanup_scope", "scenario": "S1", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上。ヘッダには宣言だけ"}
+{"base_id": "dev-c1-s3-go-eachParagraph-d1", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c1-s3-go-splitFormat-d2", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c1-s3-go-app-writeFile-d1", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c1-s3-go-CheckLength-d2", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok-strict", "error_kind": "dispatch-table", "note": "app.cmdMv はコマンド表の関数値経由で app.run から呼ばれる（直接呼び出しではない）"}
+{"base_id": "dev-c1-s3-go-Repo-refPaths-d1", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c1-s3-go-Repo-treeEntries-d2", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok-strict", "error_kind": "interface", "note": "Repo.CheckMissing は wiki.BrokenLinks・wiki.Relocate からインタフェース経由で呼ばれる"}
+{"base_id": "dev-c1-s3-go-checkFilePath-d1", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c1-s3-go-splitFrontmatter-d2", "scenario": "S3", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-externalIDKeysFor-d1", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-clearStatusPatch-d2", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-declaresSearchFields-d1", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-isSnapshotIndexFormatUnknownOrSupported-d2", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-useKubernetesLibraryPanels-d1", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-bleveIndex-authzResources-d2", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-VectorStoreServer-countRows-d1", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c2-s3-go-isRepositoryAccessible-d2", "scenario": "S3", "corpus": "c2", "generator": "v1", "verdict": "ok-strict", "error_kind": "function-value", "note": "RepositoryController.process は processFn 経由で processNextWorkItem から呼ばれる"}
+{"base_id": "dev-c3-s3-c-__se_sys_pidfd_open-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "invalid", "error_kind": "macro", "note": "SYSCALL_DEFINE が作る名前で、本文に現れない"}
+{"base_id": "dev-c3-s3-c-driver_deferred_probe_trigger-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "error", "error_kind": "cross-tu", "note": "drivers/base/core.c の 2 か所の呼び出しが漏れ（別の翻訳単位の呼び出しを落とす不具合）"}
+{"base_id": "dev-c3-s3-c-mei_cl_bus_remove_device-d2", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "error", "error_kind": "cross-tu", "note": "2 段目の drivers/misc/mei/init.c:mei_stop が漏れ（同上）"}
+{"base_id": "dev-c3-s3-c-mas_nomem-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c3-s3-c-mei_cl_bus_vtag-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "呼び出し箇所を git grep で列挙し、囲む関数を確認"}
+{"base_id": "dev-c3-s3-c-iommu_get_resv_regions-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "error", "error_kind": "cross-tu", "note": "dma-iommu.c・iommufd/io_pagetable.c の呼び出しが漏れ（同上）"}
+{"base_id": "dev-c3-s3-c-finish_task_switch-d2", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "ok-strict", "error_kind": "asm", "note": "C の直接呼び出しとしては正しい。schedule_tail はアセンブリ（ret_from_fork）から呼ばれ、2 段目に現れない"}
+{"base_id": "dev-c3-s3-c-synchronize_net-d1", "scenario": "S3", "corpus": "c3", "generator": "v1", "verdict": "error", "error_kind": "cross-tu", "note": "drivers/net 以下の多数の呼び出しが漏れ（同上）"}
+{"base_id": "dev-c1-s3-go-eachParagraph-d1", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c1-s3-go-splitFormat-d2", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c1-s3-go-app-writeFile-d1", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c1-s3-go-CheckLength-d2", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解。間接の呼び出し元は optional に入った"}
+{"base_id": "dev-c1-s3-go-Repo-refPaths-d1", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c1-s3-go-Repo-treeEntries-d2", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解。間接の呼び出し元は optional に入った"}
+{"base_id": "dev-c1-s3-go-checkFilePath-d1", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c1-s3-go-splitFrontmatter-d2", "scenario": "S3", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-externalIDKeysFor-d1", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-clearStatusPatch-d2", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-declaresSearchFields-d1", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-isSnapshotIndexFormatUnknownOrSupported-d2", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-useKubernetesLibraryPanels-d1", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-bleveIndex-authzResources-d2", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-VectorStoreServer-countRows-d1", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解"}
+{"base_id": "dev-c2-s3-go-isRepositoryAccessible-d2", "scenario": "S3", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "v1 と同じ正解。間接の呼び出し元は optional に入った"}
+{"base_id": "dev-c3-s3-c-ntp_synced-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-p9_client_flush-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-mei_cl_bus_remove_device-d2", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-mei_cl_bus_vtag-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-finish_task_switch-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-move_linked_works-d2", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-compute_effective_nodemask-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c3-s3-c-pcie_wait_for_link_status-d1", "scenario": "S3", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "static 関数。同じファイルの呼び出し箇所と囲む関数を確認。2 段目は他のファイルも確認"}
+{"base_id": "dev-c1-s6-code-privateConfig", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c1-s6-code-grepLine-MarshalJSON", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c1-s6-code-jsonValue", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c1-s6-code-parseTree", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c1-s6-code-topLevelPairs", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c1-s6-page-projects-wikictl-releases-v0-2-0-md", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": "degenerate", "note": "正しいが、wiki の初期の取り込みの日（2026-09-13）で、どのページも同じ答えになる"}
+{"base_id": "dev-c1-s6-page-projects-wikictl-decisions-adr-0017-global-scope-dir-md", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": "degenerate", "note": "正しいが、wiki の初期の取り込みの日（2026-09-13）で、どのページも同じ答えになる"}
+{"base_id": "dev-c1-s6-page-projects-wikictl-wiki-format-layout-md", "scenario": "S6", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": "degenerate", "note": "正しいが、wiki の初期の取り込みの日（2026-09-13）で、どのページも同じ答えになる"}
+{"base_id": "dev-c2-s6-code-EqualModels", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c2-s6-code-NewMockLokiClient", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c2-s6-code-NewSnapshotsTestCase", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c2-s6-code-ProvenanceToManagerProperties", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c2-s6-code-ProvideHealthService", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "error", "error_kind": "window", "note": "2024 年以降に絞った -G の最初の一致が、2022 年からある定義の変更だった（#47849 で追加）"}
+{"base_id": "dev-c2-s6-code-LabelsFromMap", "scenario": "S6", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-content-ja-docs-reference-glossary-csi-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-content-ja-docs-reference-glossary-mirror-pod-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-content-ja-docs-concepts-configuration-configmap-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-ja-docs-tasks-configure-pod-container-assign-cpu-resource-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c4-s6-page-a-application-environment-variable-expose-pod-information-md", "scenario": "S6", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "親のコミットに定義が無いこと、tag --contains、作成者日と取り込み日の月を確認"}
+{"base_id": "dev-c2-s6-code-SnapshotPublicModeOrCreate", "scenario": "S6", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "#96126 で追加、親に定義なし"}
+{"base_id": "dev-c1-s7-go-methods-fileTree", "scenario": "S7", "corpus": "c1", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c2-s7-go-methods-SharedGitEnv", "scenario": "S7", "corpus": "c2", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c2-s7-go-methods-SocialGitlab", "scenario": "S7", "corpus": "c2", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c2-s7-go-methods-DashboardStarsStorage", "scenario": "S7", "corpus": "c2", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c2-s7-go-methods-LokiHistorianStore", "scenario": "S7", "corpus": "c2", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c2-s7-go-methods-ExternalGroupMappingAuthorizer", "scenario": "S7", "corpus": "c2", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c3-s7-c-fs-autofs-file_operations", "scenario": "S7", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-drivers-net-ethernet-intel-e1000e-e1000_nvm_operations", "scenario": "S7", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-security-selinux-ss-hashtab_key_params", "scenario": "S7", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-fs-tracefs-inode_operations", "scenario": "S7", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-drivers-usb-mon-file_operations", "scenario": "S7", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c1-s7-count-type-policy", "scenario": "S7", "corpus": "c1", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c1-s7-count-type-policy", "scenario": "S7", "corpus": "c1", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c1-s7-count-type-observation", "scenario": "S7", "corpus": "c1", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c1-s7-count-type-observation", "scenario": "S7", "corpus": "c1", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c4-s7-gates-stable-1-29", "scenario": "S7", "corpus": "c4", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c4-s7-gates-stable-1-21", "scenario": "S7", "corpus": "c4", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c4-s7-gates-beta-1-23", "scenario": "S7", "corpus": "c4", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c4-s7-gates-stable-1-31", "scenario": "S7", "corpus": "c4", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c4-s7-gates-deprecated-1-28", "scenario": "S7", "corpus": "c4", "generator": "v1=v2", "verdict": "ok", "error_kind": null, "note": "メソッドは git grep、wiki は grep、feature gate は別の正規表現で数え直した"}
+{"base_id": "dev-c3-s7-c-drivers-gpu-drm-ttm-file_operations", "scenario": "S7", "corpus": "c3", "generator": "v1", "verdict": "invalid", "error_kind": "macro", "note": "DEFINE_SHOW_ATTRIBUTE が作る名前で、本文に現れない"}
+{"base_id": "dev-c3-s7-c-fs-nfs-flexfilelayout-kernel_param", "scenario": "S7", "corpus": "c3", "generator": "v1", "verdict": "invalid", "error_kind": "macro", "note": "module_param が作る __param_ 変数"}
+{"base_id": "dev-c3-s7-c-net-netlabel-genl_family", "scenario": "S7", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-net-xattr_handler", "scenario": "S7", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c3-s7-c-fs-nfs-flexfilelayout-rpc_call_ops", "scenario": "S7", "corpus": "c3", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "行頭の定義を git grep で数え直した"}
+{"base_id": "dev-c1-s8-go-scrambleLint", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c1-s8-go-mirrorUsage", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c1-s8-go-quarantineAlias", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c1-s8-go-replayTree", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c1-s8-go-shardAndPush", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c1-s8-go-CompressMissing", "scenario": "S8", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c2-s8-go-LacksAccessInFolder", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "invalid", "error_kind": "semantic", "note": "否定にしただけで、実在の HasAccessInFolder が答えになる"}
+{"base_id": "dev-c2-s8-go-ForkedInvalidFolderMetadata", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "invalid", "error_kind": "semantic", "note": "New を無意味な語に変えただけ"}
+{"base_id": "dev-c2-s8-go-archiveDashboardProperties", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c2-s8-toggle-useForkedAPIsForDatasourceCRUD", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "invalid", "error_kind": "semantic", "note": "同上"}
+{"base_id": "dev-c2-s8-toggle-hibernateScopesInMetricsExplore", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c2-s8-toggle-hibernateDashboardEmptyExtensions", "scenario": "S8", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c4-s8-gate-APIMergeChunking", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c4-s8-gate-StatefulRotateMinReadySeconds", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "invalid", "error_kind": "semantic", "note": "StatefulSet の Set を置き換えた。実在の gate と同じものと読める"}
+{"base_id": "dev-c4-s8-gate-StatefulRotateRecreateStrategy", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "invalid", "error_kind": "semantic", "note": "同上"}
+{"base_id": "dev-c4-s8-gate-NodeLifecycleSleepAction", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c4-s8-gate-SkipReplayOnlyValidationGCE", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c4-s8-gate-RelaxedDNSReplayValidation", "scenario": "S8", "corpus": "c4", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "名前が題材に無いこと（git grep -i）と、意味の上で実在のものと重ならないこと"}
+{"base_id": "dev-c2-s8-go-ArchiveOpenAPIDefinitions", "scenario": "S8", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c2-s8-go-runTestCrossBackendRVMergeCompatibility", "scenario": "S8", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c2-s8-toggle-teamLBACApiReplayFromAppPlatform", "scenario": "S8", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c4-s8-gate-NodePriority", "scenario": "S8", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c4-s8-gate-NodeDeletionCost", "scenario": "S8", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c4-s8-gate-MinDomainsInNodeTopologySpread", "scenario": "S8", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "同上"}
+{"base_id": "dev-c1-s9-default-profile-doc2code", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c1-s9-case-collision-code2doc", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c1-s9-links-syntax-doc2code", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "error", "error_kind": "incidental-file", "note": "internal/config/config.go は規則の名前の一覧を持つだけで、処理は他のファイル。全件を要する正解から外すか optional にする"}
+{"base_id": "dev-c1-s9-missing-summary-code2doc", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c1-s9-broken-link-doc2code", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "error", "error_kind": "incidental-file", "note": "internal/config/config.go は規則の名前の一覧を持つだけで、処理は他のファイル。全件を要する正解から外すか optional にする"}
+{"base_id": "dev-c1-s9-see-also-code2doc", "scenario": "S9", "corpus": "c1", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-sigv4-auth-enabled-doc2code", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-ha-redis-peer-name-code2doc", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-total-stats-collector-interval-seconds-doc2code", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-max-annotations-to-keep-code2doc", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-default-image-height-doc2code", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-limit-email-to-org-members-code2doc", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-capture-doc2code", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c2-s9-brute-force-login-protection-max-attempts-code2doc", "scenario": "S9", "corpus": "c2", "generator": "v1", "verdict": "ok", "error_kind": null, "note": "文字列リテラル・struct タグの箇所と文書の節を確認"}
+{"base_id": "dev-c1-s2-ff39d2b3ef", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "mirror.go が中心、lock_*.go はロックの実装（依存）"}
+{"base_id": "dev-c1-s2-a36ea8c622", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "read.go は付随の変更の可能性。確認で外すかどうか決める"}
+{"base_id": "dev-c1-s2-09d546fd4f", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問が残っている変更（write.go の空コミットの回避）を指す"}
+{"base_id": "dev-c1-s2-82d7d9ed74", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "error", "error_kind": "incidental-file", "note": "改行コードと BOM の保持は internal/page/edit.go。internal/cli/cli.go は付随の変更。質問の形（Relocate のどこで）も直す"}
+{"base_id": "dev-c1-s2-41f900722b", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c1-s2-36a3a0cfa1", "scenario": "S2", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "中心は internal/page/name.go、cli の 2 ファイルは呼び出し側"}
+{"base_id": "dev-c2-s2-9088b56097", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c2-s2-557b577a81", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "invalid", "error_kind": "question", "note": "patch は toggle の登録だけで、質問が尋ねる「切り替える処理」は含まない"}
+{"base_id": "dev-c2-s2-ad08cb76c5", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c2-s2-3546d0ffef", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c2-s2-6fa6e04daf", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c2-s2-72105c48b3", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "invalid", "error_kind": "question", "note": "コミットの件名（作成・宣言の操作の追加）と質問（キャッシュを無視した再取得）が合わない。本文が無く、LLM が細部を選んだ"}
+{"base_id": "dev-c2-s2-a17c6b61b7", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c2-s2-a7e0f0391d", "scenario": "S2", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-f82cee9dd8", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "invalid", "error_kind": "question", "note": "定数の定義の場所を問う質問で、振る舞いの実装箇所（S2）ではない"}
+{"base_id": "dev-c3-s2-9e5ad06ea8", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-092275882a", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-5ff232d311", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-6fe48b9952", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "invalid", "error_kind": "question", "note": "振る舞いを変えない整理（PM マクロの置き換え）で、質問が成り立たない"}
+{"base_id": "dev-c3-s2-79b3612827", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-534b5f98ab", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c3-s2-c626e2e0b2", "scenario": "S2", "corpus": "c3", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "質問と正解のファイルを、コミットメッセージと差分で確認"}
+{"base_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s4-tegy-decisions-adr-0001-subject-own-dev-process-md-L9", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s4-dr-0007-external-benchmarks-as-measurement-need-md-L9", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s4-jects-wikictl-decisions-adr-0018-linux-commands-md-L7", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "error", "error_kind": "question-points", "note": "質問が問題の原因を問い、要点は再設計の理由で、かみ合わない"}
+{"base_id": "dev-c1-s4-i-strategy-decisions-adr-0005-japan-gap-framing-md-L7", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "error", "error_kind": "points", "note": "要点が質問の言い換えで、理由になっていない"}
+{"base_id": "dev-c1-s4-egy-decisions-adr-0009-drop-finance-wf-premises-md-L7", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s4-wikictl-decisions-adr-0014-relative-links-no-id-md-L7", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "error", "error_kind": "points", "note": "同上"}
+{"base_id": "dev-c1-s4-rategy-decisions-adr-0002-elimination-reasoning-md-L18", "scenario": "S4", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-pkg-storage-unified-search-bleve-field-values-go-L243", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-pkg-services-ngalert-metrics-sender-go-L15", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-es-ngalert-api-tooling-definitions-alertmanager-go-L249", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-contribute-feature-toggles-md-L191", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50", "scenario": "S4", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s4-urity-hardening-guide-authentication-mechanisms-md-L80", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "error", "error_kind": "points", "note": "要点 2 が理由になっていない"}
+{"base_id": "dev-c4-s4-content-ja-docs-concepts-configuration-secret-md-L1014", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "error", "error_kind": "points", "note": "要点 2 が質問の言い換え"}
+{"base_id": "dev-c4-s4-s-debug-debug-cluster-resource-metrics-pipeline-md-L38", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s4--workloads-autoscaling-horizontal-pod-autoscale-md-L122", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s4-content-ja-docs-concepts-security-multi-tenancy-md-L211", "scenario": "S4", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s5-projects-wikictl-cli-config-L21", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s5-projects-wikictl-cli-agent-usage-L10", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s5-projects-wikictl-cli-operations-L13", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c1-s5-ects-wikictl-wiki-format-conventions-human-editing-L10", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "error", "error_kind": "question", "note": "質問に答え（設定の値）が入っている"}
+{"base_id": "dev-c1-s5-projects-ai-strategy-decisions-index-L15", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "invalid", "error_kind": "section", "note": "手順ではなく問いの一覧の節"}
+{"base_id": "dev-c1-s5-projects-wikictl-architecture-runtime-flow-L12", "scenario": "S5", "corpus": "c1", "generator": "v2", "verdict": "invalid", "error_kind": "section", "note": "内部の処理の流れで、利用者の手順ではない"}
+{"base_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s5--sources-datasources-azure-monitor-configure-index-L56", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s5-docs-sources-upgrade-guide-upgrade-v12-0-index-L132", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "error", "error_kind": "question", "note": "節は「アップグレードの前にすること」で、質問が広すぎる（他のページも当てはまる）"}
+{"base_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84", "scenario": "S5", "corpus": "c2", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-ks-configure-pod-container-share-process-namespace-L94", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "invalid", "error_kind": "section", "note": "手順ではなく違いの説明の節"}
+{"base_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5--production-environment-tools-kubeadm-self-hosting-L31", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-docs-tasks-debug-debug-cluster-monitor-node-health-L59", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-bug-debug-application-determine-reason-pod-failure-L26", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-content-ja-docs-tasks-debug-debug-cluster-windows-L109", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-s-administer-cluster-kubeadm-upgrading-linux-nodes-L73", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}
+{"base_id": "dev-c4-s5-plication-run-single-instance-stateful-application-L36", "scenario": "S5", "corpus": "c4", "generator": "v2", "verdict": "ok", "error_kind": null, "note": "節・LLM が作った質問と要点を確認"}

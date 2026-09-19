@@ -36,7 +36,7 @@ def main():
     print("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for (m, c), rs in sorted(groups.items()):
         ev = [r for r in rs if r["evidence_hit"] is not None]
-        print(f"| {m} | {c} | {len(rs)} | {sum(r['correct'] for r in rs)} | "
+        print(f"| {m} | {c} | {len(rs)} | {sum(1 for r in rs if r['correct'])}{'' if all(r['correct'] is not None for r in rs) else ' (+' + str(sum(1 for r in rs if r['correct'] is None)) + ' to judge)'} | "
               f"{sum(bool(r['evidence_hit']) for r in ev)}/{len(ev)} | {sum(not r['answer_valid'] for r in rs)} | "
               f"{fmt(med([r['wall_ms'] / 1000 for r in rs]))} | {fmt(med([r['turns'] for r in rs]))} | "
               f"{fmt(med([sum(r['tool_calls'].values()) for r in rs]))} | "
@@ -49,7 +49,7 @@ def main():
         ans = json.dumps(r["answer"], ensure_ascii=False)
         ans = ans if len(ans) <= 40 else ans[:37] + "..."
         tools = ",".join(f"{k}{v}" for k, v in sorted(r["tool_calls"].items()))
-        print(f"| {r['session']} | {'✓' if r['correct'] else '✗'} | {ans} | {fmt(r['evidence_hit'])} | "
+        print(f"| {r['session']} | {'?' if r['correct'] is None else '✓' if r['correct'] else '✗'} | {ans} | {fmt(r['evidence_hit'])} | "
               f"{r['wall_ms'] / 1000:.0f} | {fmt(r['turns'])} | {tools} | {r['shell_commands']} | "
               f"{r['result_subtype']}{' timeout' if r['timed_out'] else ''} |")
 
