@@ -1,0 +1,34 @@
+#!/bin/bash
+# Logging wrapper for @NAME@, written by harness/run.py. A call made by the
+# agent appends one line to cmdlog.tsv:
+#   time  argv(shell-quoted)  stdout_bytes  stderr_bytes  exit  ms  callers
+# callers is the command names of the parent processes, nearest first: the
+# agent's commands run under a shell, while Claude Code runs some commands
+# (git) itself. Calls made while a wrapped call runs see ARE_INNER and are not logged, so a
+# pipeline of wrapped commands logs each command once.
+real=@REAL@
+callers=
+p=$PPID
+for _ in 1 2 3; do
+  c=$(ps -o comm= -p "$p" 2>/dev/null) || break
+  callers+="${callers:+,}$c"
+  p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ') || break
+done
+if [ -n "${ARE_INNER:-}" ]; then exec "$real" "$@"; fi
+export ARE_INNER=1
+t=$(mktemp -d "@LOGDIR@/.tmp.XXXXXX")
+trap 'rm -rf "$t"' EXIT
+start=$(date +%s%3N)
+"$real" "$@" <&0 >"$t/o" 2>"$t/e"
+rc=$?
+end=$(date +%s%3N)
+cat "$t/o"
+cat "$t/e" >&2
+argv=$(printf '%q ' @NAME@ "$@")
+argv=${argv% }
+{
+  flock 9
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "${argv//[$'\t\n']/ }" \
+    "$(stat -c %s "$t/o")" "$(stat -c %s "$t/e")" "$rc" "$((end - start))" "$callers" >>"@LOGDIR@/cmdlog.tsv"
+} 9>>"@LOGDIR@/.cmdlog.lock"
+exit $rc

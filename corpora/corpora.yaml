@@ -1,0 +1,13 @@
+# Corpora pinned to a commit. scripts/fetch_corpora.py clones each repository
+# into data/corpora/<corpus>/<name> and checks out the commit.
+c1:
+  description: wikictl (Go) and the wiki that documents it (Japanese Markdown)
+  repos:
+    wikictl:
+      url: https://github.com/roamer7038/wikictl.git
+      commit: 66846e2b597d898c44c18ea14f96307c03e81be0  # v0.5.1
+      summary_ja: wikictl のソースコード（Go）
+    wiki:
+      url: https://github.com/roamer7038/wikictl-example-wiki.git
+      commit: 7a2a5075af4c3a41fea773f1f996165ecb7860bd
+      summary_ja: wikictl などについて書かれた wiki（日本語の Markdown）
