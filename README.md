@@ -22,7 +22,8 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `grade/` | 採点、費用の換算、集計 |
 | `docker/tools/`、`scripts/l0.py`、`scripts/l0_table.py` | L0（道具の導入と索引の測定）。道具ごとのイメージ、測定、表 |
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査） |
+| `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体） |
 
 ## 使い方
 
@@ -43,12 +44,18 @@ scripts/l0.py run serena c2 --slot b --variant go+ts --env "SERENA_C2_LANGS=go t
 scripts/l0.py run semble c3 --slot a --variant mem32g --memory 32g          # 制限を変えた測定
 
 scripts/l0_table.py                                                      # 道具 × 題材の表
+
+l1/pe3.sh                                    # L1（検索単体）を全道具 × 全題材で測る。L0 の索引を使う
+l1/run.py plan                               # 道具 × 題材の当てはまりと、外した理由
+l1/run.py run --tools zoekt,semble --corpora c1 --langs ja --slot a
+l1/grade.py table                            # 道具 × シナリオ（nDCG@10）。spread・time・xlang・querylang もある
 ```
 
 - モデルは `local:<名前>`（Ollama の Anthropic 互換 API。事前実験だけに使う）か `anthropic:<sonnet|opus|haiku>`（`~/.config/agent-retrieval-eval/oauth-token` の OAuth トークン）。
 - 題材と索引は `data/`（`$ARE_DATA`）に置く。作業ツリーを複数使うときは、同じ `$ARE_DATA` を指して共有する。
 - 記録は `../agent-retrieval-eval-runs/`（`$ARE_RUNS`）に書く。Claude Code は上位のディレクトリにある Git リポジトリの状態をシステムプロンプトに入れるので、Git リポジトリの外に置く。トランスクリプトを含むので公開しない。
 - L0 の測定は 1 回 8 vCPU・16GB・ネットワークなし、索引の作成と更新はそれぞれ 60 分が上限。計測枠（`--slot`）ごとに同時に 1 つだけ動く（ロックで待つ）。
+- L1 は L0 と同じ枠のロックを使い、道具を常駐させて 1 問ずつ検索する。検索の時間と立ち上げの時間を分けて記録する。規則（質問の変換・順位・打ち切り・同点）は `l1/tasks.py` と `l1/worker.py` の冒頭に書いてあり、そのまま事前登録に載せられる。
 - ローカル LLM の結果の `total_cost_usd` は、未知のモデルに仮の単価を当てた値なので使わない（採点では USD を出さない）。
 
 ## 問題と正解の生成
