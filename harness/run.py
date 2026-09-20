@@ -536,16 +536,11 @@ def smoke(qid, cond, argv):
         for vol in volumes:
             subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
         if volumes:
-            # How much each tool wrote into its index (overlayfs copies a file
-            # up whole on the first write: Serena's cache is 65 MB, qmd's
-            # SQLite on c4 is 356 MB), then the writes themselves go: they are
-            # the tool's own state, not a record of the session.
-            meta["index_upper_bytes"] = {t: dir_bytes(os.path.join(d, "idx", t, "upper"))
-                                         for t in cond_tools(cond)}
             # The overlay's work directory belongs to root (the kernel makes
             # it), which would stop the session's directory from ever being
             # removed; root in a container can take it away.
-            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx", image,
+            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx",
+                            CONDS[cond]["image"],
                             "sh", "-c", "rm -rf /idx/*/ovl" + ("" if KEEP_CORPUS else " /idx/*/upper")],
                            capture_output=True)
     print(f"# session dir: {d}", file=sys.stderr)

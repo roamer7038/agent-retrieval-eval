@@ -1,0 +1,213 @@
+{
+  "seed": 20260921,
+  "questions": {
+    "dev-c1-s1-go-Repo-Entries-ident": {
+      "corpus": "c1",
+      "scenario": "S1",
+      "phrasing": "identifier"
+    },
+    "dev-c1-s2-09d546fd4f-parap": {
+      "corpus": "c1",
+      "scenario": "S2",
+      "phrasing": "paraphrase"
+    },
+    "dev-c1-s3-go-app-writeFile-d1-ident": {
+      "corpus": "c1",
+      "scenario": "S3",
+      "phrasing": "identifier"
+    },
+    "dev-c1-s6-code-jsonValue-parap": {
+      "corpus": "c1",
+      "scenario": "S6",
+      "phrasing": "paraphrase"
+    },
+    "dev-c1-s7-count-type-global-observation-ident": {
+      "corpus": "c1",
+      "scenario": "S7",
+      "phrasing": "identifier"
+    },
+    "dev-c1-s8-go-compressIndex-parap": {
+      "corpus": "c1",
+      "scenario": "S8",
+      "phrasing": "paraphrase"
+    },
+    "dev-c1-s9-missing-summary-doc2code-ident": {
+      "corpus": "c1",
+      "scenario": "S9",
+      "phrasing": "identifier"
+    },
+    "dev-c2-s1-go-aggregateTargetConfig-ident": {
+      "corpus": "c2",
+      "scenario": "S1",
+      "phrasing": "identifier"
+    },
+    "dev-c2-s2-a7e0f0391d-parap": {
+      "corpus": "c2",
+      "scenario": "S2",
+      "phrasing": "paraphrase"
+    },
+    "dev-c2-s3-go-isRepositoryAccessible-d2-ident": {
+      "corpus": "c2",
+      "scenario": "S3",
+      "phrasing": "identifier"
+    },
+    "dev-c2-s6-code-NewMockLokiClient-parap": {
+      "corpus": "c2",
+      "scenario": "S6",
+      "phrasing": "paraphrase"
+    },
+    "dev-c2-s7-go-impl-autogenRuleStore-ident": {
+      "corpus": "c2",
+      "scenario": "S7",
+      "phrasing": "identifier"
+    },
+    "dev-c2-s8-toggle-alertingRulePermanentlyFreeze-parap": {
+      "corpus": "c2",
+      "scenario": "S8",
+      "phrasing": "paraphrase"
+    },
+    "dev-c2-s9-ha-reconnect-timeout-doc2code-ident": {
+      "corpus": "c2",
+      "scenario": "S9",
+      "phrasing": "identifier"
+    },
+    "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident": {
+      "corpus": "c4",
+      "scenario": "S6",
+      "phrasing": "identifier"
+    },
+    "dev-c4-s7-gates-stable-1-31-parap": {
+      "corpus": "c4",
+      "scenario": "S7",
+      "phrasing": "paraphrase"
+    },
+    "dev-c4-s8-gate-IdentifyNodeOS-ident": {
+      "corpus": "c4",
+      "scenario": "S8",
+      "phrasing": "identifier"
+    },
+    "dev-c1-s1-go-movedError-parap": {
+      "corpus": "c1",
+      "scenario": "S1",
+      "phrasing": "paraphrase"
+    },
+    "dev-c1-s3-go-splitFrontmatter-d2-parap": {
+      "corpus": "c1",
+      "scenario": "S3",
+      "phrasing": "paraphrase"
+    },
+    "dev-c2-s1-ts-useLatestDatasourceCheck-parap": {
+      "corpus": "c2",
+      "scenario": "S1",
+      "phrasing": "paraphrase"
+    },
+    "dev-c4-s7-gates-deprecated-1-28-ident": {
+      "corpus": "c4",
+      "scenario": "S7",
+      "phrasing": "identifier"
+    }
+  },
+  "primary": [
+    "dev-c1-s1-go-Repo-Entries-ident",
+    "dev-c1-s2-09d546fd4f-parap",
+    "dev-c1-s3-go-app-writeFile-d1-ident",
+    "dev-c1-s6-code-jsonValue-parap",
+    "dev-c1-s7-count-type-global-observation-ident",
+    "dev-c1-s8-go-compressIndex-parap",
+    "dev-c1-s9-missing-summary-doc2code-ident",
+    "dev-c2-s1-go-aggregateTargetConfig-ident",
+    "dev-c2-s2-a7e0f0391d-parap",
+    "dev-c2-s3-go-isRepositoryAccessible-d2-ident",
+    "dev-c2-s6-code-NewMockLokiClient-parap",
+    "dev-c2-s7-go-impl-autogenRuleStore-ident",
+    "dev-c2-s8-toggle-alertingRulePermanentlyFreeze-parap",
+    "dev-c2-s9-ha-reconnect-timeout-doc2code-ident",
+    "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident",
+    "dev-c4-s7-gates-stable-1-31-parap",
+    "dev-c4-s8-gate-IdentifyNodeOS-ident"
+  ],
+  "second": [
+    "dev-c1-s1-go-movedError-parap",
+    "dev-c1-s3-go-splitFrontmatter-d2-parap",
+    "dev-c2-s1-ts-useLatestDatasourceCheck-parap",
+    "dev-c4-s7-gates-deprecated-1-28-ident"
+  ],
+  "warmup": {
+    "c1": "dev-c1-s1-go-Lint-parap",
+    "c2": "dev-c2-s1-go-ServiceWithAuth-AuthFuncOverride-ident",
+    "c4": "dev-c4-s6-page-a-application-environment-variable-expose-pod-information-md-ident"
+  },
+  "blocks": {
+    "cacheA": {
+      "arm": "warm",
+      "questions": [
+        "dev-c1-s1-go-Repo-Entries-ident",
+        "dev-c1-s8-go-compressIndex-parap"
+      ],
+      "conds": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7"
+      ]
+    },
+    "cacheB": {
+      "arm": "rand",
+      "questions": [
+        "dev-c1-s1-go-Repo-Entries-ident",
+        "dev-c1-s8-go-compressIndex-parap"
+      ],
+      "conds": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7"
+      ]
+    },
+    "var": {
+      "arm": "rand",
+      "conds": [
+        "A1",
+        "A3",
+        "A5"
+      ],
+      "questions": [
+        "dev-c1-s1-go-Repo-Entries-ident",
+        "dev-c1-s3-go-app-writeFile-d1-ident",
+        "dev-c2-s1-go-aggregateTargetConfig-ident",
+        "dev-c4-s7-gates-stable-1-31-parap",
+        "dev-c1-s1-go-movedError-parap",
+        "dev-c1-s3-go-splitFrontmatter-d2-parap",
+        "dev-c2-s1-ts-useLatestDatasourceCheck-parap",
+        "dev-c4-s7-gates-deprecated-1-28-ident",
+        "dev-c1-s8-go-compressIndex-parap",
+        "dev-c2-s9-ha-reconnect-timeout-doc2code-ident",
+        "dev-c2-s6-code-NewMockLokiClient-parap",
+        "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident"
+      ]
+    },
+    "tools": {
+      "arm": "rand",
+      "conds": [
+        "A2",
+        "A4",
+        "A6",
+        "A7"
+      ],
+      "questions": [
+        "dev-c1-s8-go-compressIndex-parap",
+        "dev-c2-s1-go-aggregateTargetConfig-ident",
+        "dev-c2-s9-ha-reconnect-timeout-doc2code-ident",
+        "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident"
+      ]
+    }
+  }
+}
