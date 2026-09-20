@@ -23,7 +23,11 @@ Gold types:
             accepted without being required
   files     the answer is a list of paths; precision, recall and F1. With
             "match": "any", correct when one gold file is named; otherwise
-            correct when every gold file is named
+            correct when every gold file is named. Paths in "optional" are
+            neither required nor counted against precision: S2 puts there the
+            files a patch touched besides the main one (the main file is
+            required, what came with it may be named or not), S9 the files
+            that only carry the name in a list
   rubric    free text judged against "points" by the LLM judge (and people):
             correct is null here and filled from --judgments (lines of
             {"session", "correct"})
@@ -120,9 +124,15 @@ def set_scores(answer, gold):
 
 
 def files_scores(answer, gold):
+    """Correct when every path of "value" is named (or one of them with
+    "match": "any"). A path in "optional" is neither required nor counted
+    against precision, and a path in neither is counted against precision but
+    does not by itself make the answer wrong."""
     got = {norm_path(a, gold.get("repo")) for a in as_list(answer)}
     value = set(gold["value"])
+    optional = {norm_path(o, gold.get("repo")) for o in (gold.get("optional") or [])}
     tp = len(got & value)
+    got = got - (optional - value)
     p = tp / len(got) if got else 0.0
     r = tp / len(value) if value else 0.0
     f1 = 2 * p * r / (p + r) if p + r else 0.0

@@ -1,0 +1,5 @@
+{"item": "dev-c1-s9-default-profile-doc2code:internal/config/config.go", "role": "handles", "by": "agent", "note": "`yaml:\"default_profile\"` の構造体タグでこのキーを読み、sourceDefault の選択と警告・エラーの文言で値の有無が動きを変える（config.go:35,101,174,325）。一覧ではない"}
+{"item": "dev-c1-s9-case-collision-code2doc:projects/wikictl/releases/v0-2-0.md", "role": "names_only", "by": "agent", "note": "リリースノートの変更点の箇条書きに規則名が並ぶだけで、case_collision が何を報告するかの説明が無い"}
+{"item": "dev-c1-s9-broken-link-code2doc:projects/wikictl/cli/read-commands.md", "role": "handles", "by": "agent", "note": "lint の行が broken_link を報告する条件（リンク先が存在するのにミラーから読めない場合は broken_link にせず終了コード 5）を述べており、名前が並ぶだけではない"}
+{"item": "dev-c2-s9-user-identity-token-url-code2doc:docs/sources/setup-grafana/configure-grafana/_index.md", "role": "handles", "by": "agent", "note": "`#### user_identity_token_url` の節があり、何を上書きする設定かと既定値を説明している"}
+{"item": "dev-c2-s9-disable-total-stats-doc2code:pkg/setting/setting.go", "role": "handles", "by": "agent", "note": "iniFile.Section(\"metrics\").Key(\"disable_total_stats\") を読んで Cfg.MetricsEndpointDisableTotalStats に入れる。値で集計の有無が変わる"}

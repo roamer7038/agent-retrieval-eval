@@ -8,6 +8,7 @@ turned off and the temperature is 0 with a fixed seed.
 import hashlib
 import json
 import os
+import re
 import time
 import urllib.request
 
@@ -17,6 +18,7 @@ URL = os.environ.get("ARE_LOCAL_URL", "http://192.168.1.240:8080")
 CACHE = os.path.join(WORK, "llm-cache")
 GEN_MODEL = "qwen3.8:27b"     # paraphrases, questions from passages, back-translation check
 CHECK_MODEL = "gemma4:31b"    # uniqueness, translation, answer judging
+CHECK_MODEL_2 = "muse-glimmer:30b"   # the second judge, of another lineage (gen/judge.py)
 OPTIONS = {"temperature": 0, "seed": 1, "num_ctx": 16384}
 
 stats = {"calls": 0, "cached": 0, "seconds": 0.0}
@@ -57,9 +59,19 @@ def chat(model, prompt, system=None, fmt=None, options=None):
 
 def chat_json(model, prompt, system=None, schema=None):
     """Ask for JSON (Ollama's structured output) and parse it; None if the
-    model's text is not JSON."""
+    model's text is not JSON. Some models end their text with a special token
+    (muse-glimmer writes "<|eot|>"), so those and anything outside the
+    outermost braces are cut off before a second try."""
     txt = chat(model, prompt, system=system, fmt=schema or "json")
     try:
         return json.loads(txt)
     except ValueError:
-        return None
+        pass
+    t = re.sub(r"<\|[^|]*\|>", "", txt).strip()
+    i, j = t.find("{"), t.rfind("}")
+    if i >= 0 and j > i:
+        try:
+            return json.loads(t[i:j + 1])
+        except ValueError:
+            return None
+    return None

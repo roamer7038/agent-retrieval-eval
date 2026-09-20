@@ -9,6 +9,10 @@ split by '_', '-' or ' '). The gold is null.
 
 The name is absent by construction; what a person has to check is that the
 paraphrase does not describe something that does exist under another name.
+Three candidates are drawn for every question wanted (N), because the
+paraphrase of a name that does not exist is thrown away about seven times out
+of ten: asked without the name, the question drifts towards the real thing
+(PE2, results/pe2-gold.md section 4).
 Output: gold-work/cand/<split>/S8.jsonl
 """
 import argparse
@@ -16,7 +20,7 @@ import collections
 import os
 import re
 
-from common import CAND, OUT, REPOS, repo_dir, read_jsonl, rng, split_of, write_jsonl
+from common import CAND, OUT, REPOS, dropped_base_ids, repo_dir, read_jsonl, rng, split_of, write_jsonl
 
 SWAP = {"Get": "Archive", "List": "Merge", "Create": "Clone", "Delete": "Freeze", "Update": "Rebalance",
         "Check": "Compress", "Parse": "Encrypt", "Validate": "Throttle", "Build": "Shard", "Load": "Snapshot",
@@ -26,7 +30,9 @@ SWAP = {"Get": "Archive", "List": "Merge", "Create": "Clone", "Delete": "Freeze"
         "Enable": "Hibernate", "Search": "Replay", "Render": "Compress", "Export": "Hibernate"}
 TEXT_EXT = (".go", ".ts", ".tsx", ".js", ".md", ".yaml", ".yml", ".json", ".ini", ".toml", ".txt", ".html", ".c", ".h",
             ".rst", ".cue", ".sh")
-N = {"c1": 6, "c2": 6, "c4": 6}
+# 3 candidates per question wanted: the paraphrase of about 7 in 10 is thrown
+# away, and the other scenarios keep 11-26 base questions
+N = {"c1": 18, "c2": 18, "c4": 18}
 _TEXT = {}
 
 
@@ -95,12 +101,14 @@ def go_items(corpus, split, n, repo):
             defs.append(d)
     r = rng(split, "S8", corpus, "go")
     r.shuffle(defs)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for d in defs:
         if len(out) == n:
             break
         fake, sw = mutate(d["name"], r)
         if not fake or not absent(corpus, fake):
+            continue
+        if f"{split}-{corpus}-s8-go-{fake}" in dropped:
             continue
         what = f"型 `{d['recv']}` のメソッド `{fake}`" if d["recv"] else f"関数 `{fake}`"
         out.append(item(corpus, split, f"go-{fake}", f"{repo} のソースコードで、{what} はどのファイルに定義されているか。",
@@ -117,7 +125,7 @@ def toggles_c2(split, n):
     names = [x for x in names if split_of(f"c2:S8:toggle:{x[0]}") == split]
     r = rng(split, "S8", "c2", "toggle")
     r.shuffle(names)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for name, desc in names:
         if len(out) == n:
             break
@@ -125,7 +133,7 @@ def toggles_c2(split, n):
         if not fake:
             continue
         fake = fake[0].lower() + fake[1:]
-        if not absent("c2", fake):
+        if not absent("c2", fake) or f"{split}-c2-s8-toggle-{fake}" in dropped:
             continue
         out.append(item("c2", split, f"toggle-{fake}",
                         f"Grafana の feature toggle `{fake}` は、何を有効にするものか。", fake, name, desc, sw,
@@ -144,12 +152,12 @@ def gates_c4(split, n):
     gates = [g for g in gates if split_of(f"c4:S8:gate:{g[0]}") == split]
     r = rng(split, "S8", "c4", "gate")
     r.shuffle(gates)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for name, desc in gates:
         if len(out) == n:
             break
         fake, sw = mutate(name, r)
-        if not fake or not absent("c4", fake):
+        if not fake or not absent("c4", fake) or f"{split}-c4-s8-gate-{fake}" in dropped:
             continue
         out.append(item("c4", split, f"gate-{fake}",
                         f"Kubernetes の feature gate `{fake}` は、どの版でベータになったか。", fake, name, desc, sw,

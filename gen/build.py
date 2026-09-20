@@ -32,14 +32,14 @@ AUDIT = os.path.join(ROOT, "results", "pe2-audit.jsonl")
 # (PE0: the range is defined per scenario, not left to the path list alone).
 EVIDENCE_RULE = {
     "S1": "定義のあるファイル",
-    "S2": "変更が振る舞いを実装したファイル（正解のファイル）のどれか",
+    "S2": "振る舞いを主に実装しているファイル（正解のファイル）か、その変更に付随して変わったファイル",
     "S3": "対象の関数の定義のファイルか、正解の呼び出し元のファイル",
     "S4": "理由を書いた節のあるページ（同じ理由を書いた別のページが見つかれば人の確認で足す）",
     "S5": "手順を書いた節のあるページ（同じ手順を書いた別のページが見つかれば人の確認で足す）",
     "S6": "対象のファイル・ページか、版の対応を示すリリースノート・CHANGELOG（履歴は git log で確かめるので、根拠が無くても正答は正答）",
-    "S7": "集計の対象の範囲（ディレクトリ）の中のファイル",
+    "S7": "集計の対象の範囲（ディレクトリ）の中のファイル（テストとテスト用の代用品は対象外）",
     "S8": "根拠を求めない（存在しないことの確認）",
-    "S9": "正解の側（doc2code はコード、code2doc は文書）のファイル",
+    "S9": "正解の側（doc2code はコード、code2doc は文書）のファイル。その語を扱う（値を読み書きする・値で処理を変える）ファイル",
 }
 
 
@@ -82,6 +82,10 @@ def main():
                 continue
             if c["gold"]["type"] == "rubric" and not c["gold"].get("points"):
                 stats[(c["scenario"], "no_points")] += 1
+                continue
+            if c["gold"]["type"] in ("files", "set") and not c["gold"].get("value"):
+                # S9 after judge.py s9apply: no file was left that handles the term
+                stats[(c["scenario"], "no_gold_left")] += 1
                 continue
             au = audit.get(c["base_id"])
             if au and au["verdict"] in ("error", "invalid"):
