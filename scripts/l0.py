@@ -3,8 +3,8 @@
 limits, and measure time, size, memory, failures and the incremental update.
 
     scripts/l0.py build <tool> [...]              docker build are-l0-base and the tools' images
-    scripts/l0.py run <tool> <corpus> [--slot a|b|c] [--timeout 3600] [--keep]
-    scripts/l0.py batch --tools t1,t2 --corpora c1,c2 [--slot a] [--timeout 3600]
+    scripts/l0.py run <tool> <corpus> [--slot a|b|c] [--timeout 3600] [--variant NAME --env K=V ...]
+    scripts/l0.py batch --tools t1,t2 --corpora c1,c2 [--slot a] [--timeout 3600] [--variant NAME --env K=V ...]
     scripts/l0.py env                             print the measuring environment
 
 A tool is a directory docker/tools/<tool>/ with a Dockerfile (FROM
@@ -32,12 +32,22 @@ code file and a paragraph with the word areL0Probe to one document
 (CHANGES), then runs query with Q_SYMBOL=areL0Probe to see whether the
 update took the change in. One JSON line per run is appended to
 results/pe1-l0.jsonl.
+
+A variant (--variant NAME with --env K=V passed to run.sh, e.g.
+SERENA_C2_LANGS="go typescript") is recorded as its own row and keeps its
+index in $ARE_DATA/indexes/<tool>/<corpus>.<variant>.
+
+Only one measurement runs in a slot at a time: a run waits for the slot's
+lock ($ARE_DATA/indexes/.slot-<slot>.lock), and the record keeps what ran in
+the other slots when it started and the host's load average before and after.
 """
 import argparse
 import datetime
+import fcntl
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -52,9 +62,10 @@ INDEXES = os.path.join(DATA, "indexes")
 TOOLS = os.path.join(ROOT, "docker", "tools")
 RESULTS = os.path.join(ROOT, "results", "pe1-l0.jsonl")
 
-# The measuring environment. Two runs may go at once, each on its own four
-# physical cores (SMT siblings are adjacent on this machine); the GPU runs use
-# the third set.
+# The measuring environment. Each slot is a set of eight vCPUs; runs in
+# different slots may go at once, one run per slot. Under WSL2 the vCPUs are
+# scheduled by the hypervisor, so a slot is not tied to physical cores. The
+# GPU runs use slot c.
 CPUS = "8"
 MEMORY = "16g"
 SLOTS = {"a": "0-7", "b": "8-15", "c": "16-23"}
@@ -117,7 +128,7 @@ def environment():
     }
 
 
-def docker_run(tool, corpus, vol, idx, phase, slot, timeout, gpu, extra_env=None, label=None):
+def docker_run(tool, corpus, vol, idx, phase, slot, timeout, gpu, extra_env=None, label=None, memory=MEMORY):
     label = label or phase
     env = {"CORPUS": corpus, "REPOS": " ".join(repos(corpus)), "HOME": "/index/home", "L0_TIMEOUT": str(timeout),
            "Q_SYMBOL": QUERIES[corpus][0], "Q_TEXT": QUERIES[corpus][1], "L0_LABEL": label,
@@ -126,7 +137,7 @@ def docker_run(tool, corpus, vol, idx, phase, slot, timeout, gpu, extra_env=None
            "GRAPHIFY_MAX_WORKERS": CPUS, "CBM_WORKERS": CPUS}
     env.update(extra_env or {})
     cmd = ["docker", "run", "--rm", "--network", "none", "--cpus", CPUS, "--cpuset-cpus", SLOTS[slot],
-           "--memory", MEMORY, "--memory-swap", MEMORY, "-v", f"{vol}:/work", "-v", f"{idx}:/index"]
+           "--memory", memory, "--memory-swap", memory, "-v", f"{vol}:/work", "-v", f"{idx}:/index"]
     if gpu:
         cmd += ["--gpus", "all"]
     for k, v in env.items():
@@ -165,11 +176,49 @@ def tool_version(tool):
     return sh("docker", "image", "inspect", "-f", '{{index .Config.Labels "l0.version"}}', image(tool))
 
 
+def slot_file(slot, ext):
+    return os.path.join(INDEXES, f".slot-{slot}.{ext}")
+
+
+def others_running(slot):
+    out = {}
+    for s in SLOTS:
+        if s == slot:
+            continue
+        try:
+            with open(slot_file(s, "running")) as f:
+                out[s] = f.read().strip()
+        except OSError:
+            pass
+    return out
+
+
 def run(args):
+    os.makedirs(INDEXES, exist_ok=True)
+    gpu = os.path.exists(os.path.join(TOOLS, args.tool, "gpu"))
+    slot = args.slot or ("c" if gpu else "a")
+    with open(slot_file(slot, "lock"), "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print(f"waiting for slot {slot}", file=sys.stderr, flush=True)
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        name = f"{args.tool}{'.' + args.variant if args.variant else ''} {args.corpus}"
+        with open(slot_file(slot, "running"), "w") as f:
+            f.write(f"{name} since {datetime.datetime.now().astimezone().isoformat(timespec='seconds')}\n")
+        try:
+            return run_locked(args, slot, gpu)
+        finally:
+            os.remove(slot_file(slot, "running"))
+
+
+def run_locked(args, slot, gpu):
     tool, corpus = args.tool, args.corpus
-    base = os.path.join(INDEXES, tool, corpus)
+    extra = dict(kv.split("=", 1) for kv in args.env)
+    base = os.path.join(INDEXES, tool, corpus + (f".{args.variant}" if args.variant else ""))
     upper, work, idx = (os.path.join(base, d) for d in ("upper", "ovl", "index"))
-    vol = f"are-l0-{tool}-{corpus}"
+    # A docker volume name takes only [a-zA-Z0-9][a-zA-Z0-9_.-]*.
+    vol = re.sub(r"[^A-Za-z0-9_.-]", "-", f"are-l0-{tool}-{corpus}" + (f"-{args.variant}" if args.variant else ""))
     subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
     if os.path.exists(base):
         # overlay's work dir holds a root-owned directory; remove it in a container.
@@ -182,15 +231,17 @@ def run(args):
     def size():
         return du(upper) + du(idx) - du(os.path.join(idx, "l0"))
 
-    gpu = os.path.exists(os.path.join(TOOLS, tool, "gpu"))
-    slot = args.slot or ("c" if gpu else "a")
     rec = {"tool": tool, "version": tool_version(tool), "corpus": corpus, "slot": slot, "gpu": gpu,
            "date": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "env": environment(),
-           "phases": {}}
+           "timeout_s": args.timeout, "memory": args.memory, "others_running_at_start": others_running(slot),
+           "loadavg_start": os.getloadavg(), "phases": {}}
+    if args.variant:
+        rec["variant"] = args.variant
+        rec["variant_env"] = extra
     try:
         phases = rec["phases"]
         for phase in ("prepare", "index"):
-            r, _ = docker_run(tool, corpus, vol, idx, phase, slot, args.timeout, gpu)
+            r, _ = docker_run(tool, corpus, vol, idx, phase, slot, args.timeout, gpu, extra, memory=args.memory)
             phases[phase] = r
             if r.get("exit") == 3:
                 rec["status"] = "n/a"
@@ -206,24 +257,25 @@ def run(args):
         # What the index phase added: the tree's writes and /index, less the
         # measuring logs and what prepare had written.
         rec["size_bytes"] = size() - rec["size_after_prepare_bytes"]
-        r, out = docker_run(tool, corpus, vol, idx, "query", slot, 600, gpu)
+        r, out = docker_run(tool, corpus, vol, idx, "query", slot, 600, gpu, extra, memory=args.memory)
         phases["query"] = r
         r["hit_symbol"] = any(QUERIES[corpus][0] in l for l in out)
         apply_changes(corpus, vol)
-        r, _ = docker_run(tool, corpus, vol, idx, "update", slot, args.timeout, gpu)
+        r, _ = docker_run(tool, corpus, vol, idx, "update", slot, args.timeout, gpu, extra, memory=args.memory)
         phases["update"] = r
-        r, out = docker_run(tool, corpus, vol, idx, "query", slot, 600, gpu, {"Q_SYMBOL": "areL0Probe", "Q_TEXT": "areL0Probe"}, "query_after_update")
+        r, out = docker_run(tool, corpus, vol, idx, "query", slot, 600, gpu, {**extra, "Q_SYMBOL": "areL0Probe", "Q_TEXT": "areL0Probe"}, "query_after_update", memory=args.memory)
         r["hit_symbol"] = any("areL0Probe" in l for l in out)
         phases["query_after_update"] = r
         rec["status"] = "ok"
         return rec
     finally:
         subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
+        rec["loadavg_end"] = os.getloadavg()
         if not args.dry:
             os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
             with open(RESULTS, "a") as f:
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        summary = {k: rec.get(k) for k in ("tool", "corpus", "status", "failed_phase", "size_bytes")}
+        summary = {k: rec.get(k) for k in ("tool", "variant", "corpus", "status", "failed_phase", "size_bytes")}
         summary["hits"] = [rec["phases"].get(p, {}).get("hit_symbol") for p in ("query", "query_after_update")]
         summary.update({p: (v.get("exit"), v.get("wall_s"), v.get("mem_anon_peak_bytes")) for p, v in rec["phases"].items()})
         print(json.dumps(summary), flush=True)
@@ -239,12 +291,18 @@ def main():
     r.add_argument("corpus")
     r.add_argument("--slot", choices=SLOTS)
     r.add_argument("--timeout", type=int, default=3600)
+    r.add_argument("--memory", default=MEMORY, help=f"the container's memory limit (default {MEMORY})")
+    r.add_argument("--variant", help="name of a variant of the tool's settings (a row of its own)")
+    r.add_argument("--env", action="append", default=[], metavar="K=V", help="environment for run.sh (with --variant)")
     r.add_argument("--dry", action="store_true", help="do not append to results/pe1-l0.jsonl")
     bt = sub.add_parser("batch")
     bt.add_argument("--tools", required=True)
     bt.add_argument("--corpora", default="c1,c2,c4,c3")
     bt.add_argument("--slot", choices=SLOTS)
     bt.add_argument("--timeout", type=int, default=3600)
+    bt.add_argument("--memory", default=MEMORY, help=f"the container's memory limit (default {MEMORY})")
+    bt.add_argument("--variant", help="name of a variant of the tool's settings (a row of its own)")
+    bt.add_argument("--env", action="append", default=[], metavar="K=V", help="environment for run.sh (with --variant)")
     bt.add_argument("--dry", action="store_true")
     sub.add_parser("env")
     args = ap.parse_args()
