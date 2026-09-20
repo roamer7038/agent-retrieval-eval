@@ -514,11 +514,17 @@ def s7_go(corpus, split, n):
         if not d or not 2 <= len(ims) <= 15 or g.universe[d["id"]] != 1:
             continue
         fams.append(("impl", d, sorted({f"{im['file']}:{im['type']}" for im in ims})))
-    # 2. methods of a type
-    by_recv = collections.defaultdict(list)
+    # 2. methods of a type. The question asks for every method of the type
+    # and leaves out only what it names (the files written for tests), so the
+    # gold counts the generated methods too; whether a type is drawn at all is
+    # still decided on the methods written by hand, so that this does not
+    # change which families the draw sees (PE2d).
+    by_recv, all_recv = collections.defaultdict(list), collections.defaultdict(list)
     for d in g.defs:
-        if d["kind"] == "method" and not d["test"] and not d["generated"] and not is_test_path(d["file"]):
-            by_recv[(d["pkg"], d["recv"])].append(d)
+        if d["kind"] == "method" and not d["test"] and not is_test_path(d["file"]):
+            all_recv[(d["pkg"], d["recv"])].append(d)
+            if not d["generated"]:
+                by_recv[(d["pkg"], d["recv"])].append(d)
     tdefs = {(d["pkg"], d["id"]): d for d in g.defs
              if d["kind"] in ("struct", "type") and not d["test"] and not is_test_path(d["file"])}
     for key, ms in by_recv.items():
@@ -527,7 +533,7 @@ def s7_go(corpus, split, n):
             continue
         if corpus == "c2" and not d["file"].startswith("pkg/"):
             continue
-        fams.append(("methods", d, sorted({m["name"] for m in ms})))
+        fams.append(("methods", d, sorted({m["name"] for m in all_recv[key]})))
     fams = [f for f in fams if split_of(f"{corpus}:S7:{f[0]}:{f[1]['file']}:{f[1]['id']}") == split]
     r.shuffle(fams)
     out, dropped = [], dropped_base_ids()
@@ -548,7 +554,7 @@ def s7_go(corpus, split, n):
             fmt = "メソッド名の一覧"
             gold = {"type": "set", "match": "name", "value": items}
             ptask = "次の型に定義されているメソッドをすべて挙げさせる質問"
-            ev = sorted({f"{repo}/{m['file']}" for m in by_recv[(d['pkg'], d['id'])]})
+            ev = sorted({f"{repo}/{m['file']}" for m in all_recv[(d['pkg'], d['id'])]})
         out.append({
             "base_id": f"{split}-{corpus}-s7-go-{kind}-{d['id']}",
             "corpus": corpus, "scenario": "S7", "split": split, "code_lang": "go", "family": kind,

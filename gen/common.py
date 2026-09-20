@@ -41,19 +41,34 @@ CUTOFF = "2026-06-01"
 # way, so that the words of the question and the gold say the same thing.
 # The list is closed on purpose: the question names it, so an answer can be
 # decided without reading this file.
+# The name of a file counts too, not only the directory it sits in (PE2d):
+# a file called testing.go, test_utils.go or testUtils.ts holds helpers for
+# the tests of its package, and grafana has 29 of the first alone. The names
+# are a closed list rather than "the name begins with test", because
+# grafana's tester.go and testresults.go and linux's testmode.c are ordinary
+# code whose name begins that way.
 TEST_PATH = re.compile(r"""(?ix)
       _test\.(go|c|py)$ | \.(test|spec)\.[jt]sx?$ | (^|/)test_[^/]+\.(c|py)$
     | (^|/)(fake|mock|stub|dummy)[a-z0-9_]*\.(go|ts|tsx)$
     | (^|/)[a-z0-9_]*_(fake|mock|stub)\.(go|ts|tsx)$
+    | (^|/)test([_-]?(s|ing|util|utils|helper|helpers|support|env|setup|data|fixture|fixtures))?\.(go|c|py|ts|tsx)$
+    | (^|/)self[_-]?tests?\.(go|c|py)$
+    | (^|/)fixtures?\.(go|c|py|ts|tsx)$ | \.fixtures?\.[jt]sx?$
     | (^|/)(test(s|ing|data|util|utils|helper|helpers|support|case|cases|fixtures)?
            |fake|fakes|mock|mocks|stub|stubs|fixture|fixtures|__tests__|__mocks__|__fixtures__
            |e2e|e2e-playwright|selftests|kunit)(/|$)
 """)
-# How the questions of S3 and S7 say which files they leave out.
-TEST_EXCL_JA = ("テストとテスト用の代用品のファイル（`_test.go`・`*.test.tsx` などの名前、"
-                "`testdata/`・`fakes/`・`mocks/`・`testing/` などの場所、"
-                "`mock`・`fake`・`stub` で始まるか `_mock.go`・`_fake.go` のように終わる名前のファイル）を除く")
-TEST_EXCL_EN_NOTE = "tests and their stand-ins (fakes, mocks, stubs, test data) are left out"
+# How the questions of S3 and S7 say which files they leave out. This wording
+# and TEST_PATH above are meant to say the same thing, so that the gold of a
+# question can be worked out from the question alone.
+TEST_EXCL_JA = ("テストとテスト用の代用品のファイル（名前が `_test.go`・`*.test.tsx`・`*.spec.ts` のように終わるもの、"
+                "`mock`・`fake`・`stub` で始まるか `_mock.go`・`_fake.go`・`_stub.go` のように終わるもの、"
+                "名前そのものが `test`・`tests`・`testing`・`testutil(s)`・`testhelper(s)`・`testsupport`・"
+                "`testenv`・`testsetup`・`testdata`・`selftest`・`fixture(s)` であるもの"
+                "（`_`・`-` の有無と大文字・小文字は問わない）、"
+                "`testdata/`・`fakes/`・`mocks/`・`testing/`・`e2e/` などの場所にあるもの）を除く")
+TEST_EXCL_EN_NOTE = ("tests and their stand-ins (fakes, mocks, stubs, test data, and files whose own "
+                     "name is testing, testutil, testhelper and the like) are left out")
 
 
 def is_test_path(path):

@@ -10,6 +10,13 @@ Stages, run model by model so the server does not switch models per item
   1. qgen      (GEN_MODEL)   S2, S4, S5: the question with identifiers and
                              the key points, from the commit message or the
                              section (the only step that sees corpus text)
+  1b. rubric   (CHECK_MODEL) S4 only: is each key point the reason itself, or
+                             a restatement of the decision, a consequence or a
+                             caveat? Judged by another model than the one that
+                             wrote the points, against the lines the gold
+                             points at. The rejected get one more qgen, told
+                             which point was wrong, and are dropped if the
+                             second try fails too
   2. para      (GEN_MODEL)   the paraphrase, from the question, the list of
                              identifiers to avoid and a short description of
                              the subject (a doc comment, a page title); no files.
@@ -38,7 +45,7 @@ import re
 import sys
 
 import llm
-from common import CAND, WORK, read_jsonl, rng, write_jsonl
+from common import CAND, WORK, read_jsonl, read_lines, rng, write_jsonl
 
 PHRASED = os.path.join(WORK, "phrased")
 
@@ -112,7 +119,7 @@ def repo_of(c):
     return {"c1": "wikictl", "c2": "grafana", "c3": "linux", "c4": "website"}[c["corpus"]]
 
 
-def stage_qgen(c):
+def stage_qgen(c, feedback=""):
     sc = c["scenario"]
     if sc == "S2":
         cm = c["commit"]
@@ -122,6 +129,10 @@ def stage_qgen(c):
     else:
         q = c["qgen"]
         prompt = QGEN[sc].format(repo=REPO_JA[repo_of(c)], heading=q["heading"], text=q["text"])
+    if feedback:
+        # the second try; without it the prompt (and so the cached answer) is
+        # the one the earlier runs used
+        prompt += f"\n\n前回の答えは次の理由で使えませんでした: {feedback}\n同じ一節から作り直してください。"
     j = llm.chat_json(llm.GEN_MODEL, prompt, schema=QGEN_SCHEMA)
     if not j or not j.get("question"):
         c["status"] = "qgen_failed"
@@ -141,6 +152,117 @@ def stage_qgen(c):
         c["subject"] = {"label": c["section"]["heading"], "kind": "section",
                         "doc": c["section"]["heading"] + ": " + c["qgen"]["text"][:300]}
         c["paraphrase_task"] = {"S4": "設計や方針の理由を尋ねる質問", "S5": "手順を尋ねる質問"}[sc]
+
+
+# ---------------------------------------------------------------- stage 1b
+
+# The rubric (the key points) is what the judge of gen/judge.py scores a
+# free-text answer against: an answer is correct only when it states every
+# point. A point that is not the reason itself -- the decision said again, an
+# effect of it, a caveat -- therefore marks a right answer wrong. The audit of
+# PE2c found this in 4 of the 25 S4 bases it looked at and could not see it in
+# the paraphrase check (results/pe2c.md), so a second model reads the lines
+# the gold points at and labels each point. The model is not the one that
+# wrote the points (CHECK_MODEL against GEN_MODEL).
+# Only S4 has this check: it is the scenario whose answer is a reason. S5 asks
+# for steps, where a restatement of the goal is not the same fault.
+RUBRIC_SCENARIOS = ("S4",)
+RUBRIC_LABELS = ["reason", "restatement", "consequence", "caveat", "not_in_text"]
+# Labels a key point may carry and still be kept, and how many of the points
+# of one question may fail. Both are set from the 33 audited S4 bases of PE2b
+# and PE2c (gen/calibrate_rubric.py, results/pe2d.md).
+# On those 33 bases (17 the audit passed, 8 it threw away for the key points
+# or the section, 8 it threw away for the paraphrase), this rule marks 7 of
+# the 8 faulty ones and 5 of the 17 sound ones. The looser rules keep all 17
+# but find only 1 or 2 of the 8. The strict one is taken because a candidate
+# it rejects gets one more try and, failing that, is replaced by drawing
+# deeper, while a fault it misses reaches the questions.
+RUBRIC_KEEP = {"reason"}
+RUBRIC_BAD_MAX = 0.0          # share of the points of one question; 0.34 is
+                              # the same rule on this set (most have 1 or 2)
+RUBRIC_NEED_SECTION = True    # drop when the judge says the lines state no reason
+
+RUBRIC = """次は、{repo} の文書（またはソースコードのコメント）の一節と、その一節から作った「なぜ〜か」の質問、そしてその質問の採点に使う「答えの要点」です。
+
+一節:
+{ref}
+
+質問: {q}
+
+要点:
+{points}
+
+採点では、回答が要点をすべて述べていれば正解、一つでも欠ければ不正解になります。そのため、要点は「なぜそうするのか」の中身でなければなりません。要点ごとに次の 5 つから 1 つを選んでください。
+- reason: なぜそうするのか（原因・根拠・目的）を述べていて、その記述が一節にある
+- restatement: 何がそうなっているか（決めごと・仕様・事実）を言い直しただけ（質問の言い直しもこれ）
+- consequence: そうした結果どうなるか（帰結・効果・影響）だけを述べている
+- caveat: 但し書き・条件・例外・注意だけを述べている
+- not_in_text: 一節に書かれていない
+
+- labels には、上の要点と同じ順・同じ数で、要点ごとの label を入れる。
+- section_states_reason には、一節が質問に対する理由を述べていれば true、決めごとや仕様を述べるだけで理由を述べていなければ false を入れる。
+- reason には判断の理由を短く書く。
+JSON で答えてください。"""
+
+RUBRIC_SCHEMA = {"type": "object", "properties": {
+    "labels": {"type": "array", "items": {"type": "string", "enum": RUBRIC_LABELS}},
+    "section_states_reason": {"type": "boolean"}, "reason": {"type": "string"}},
+    "required": ["labels", "section_states_reason", "reason"]}
+
+RUBRIC_FEEDBACK = {
+    "restatement": "決めごとや仕様を言い直しただけで、理由になっていない",
+    "consequence": "そうした結果どうなるかだけを述べていて、理由になっていない",
+    "caveat": "但し書き・条件だけを述べていて、理由になっていない",
+    "not_in_text": "一節に書かれていない",
+}
+
+
+def gold_ref_text(c):
+    """The lines the gold points at, as the judge of a free-text answer sees
+    them (gen/judge.py ref_text). The check reads these, not the text the
+    question was written from, so that a gold whose range leaves the reason
+    out is caught here."""
+    ref = ((c.get("gold") or {}).get("ref") or [None])[0]
+    if not ref:
+        return ""
+    try:
+        return read_lines(c["corpus"], ref["repo"], ref["file"], ref["lines"][0], ref["lines"][1])[:3000]
+    except OSError:
+        return ""
+
+
+def stage_rubric(c):
+    """Label each key point; True when the rubric may be used as it is."""
+    points = ((c.get("gold") or {}).get("points") or [])
+    if not points:
+        return False
+    prompt = RUBRIC.format(repo=REPO_JA[repo_of(c)], ref=gold_ref_text(c), q=c["q_ident"],
+                           points="\n".join(f"{i + 1}. {p}" for i, p in enumerate(points)))
+    j = llm.chat_json(llm.CHECK_MODEL, prompt, schema=RUBRIC_SCHEMA)
+    labels = (j or {}).get("labels") or []
+    if not j or len(labels) != len(points):
+        # an unusable verdict is not a reason to keep the question: the point
+        # of the check is that a person does not have to look at every rubric
+        ok, bad, share = False, [], None
+    else:
+        bad = [i for i, l in enumerate(labels) if l not in RUBRIC_KEEP]
+        share = len(bad) / len(points)
+        ok = share <= RUBRIC_BAD_MAX and not (RUBRIC_NEED_SECTION and j.get("section_states_reason") is False)
+    c.setdefault("rubric_rounds", []).append({
+        "points": list(points), "result": j, "bad_share": share, "keep": ok,
+        "bad": [{"point": points[i], "label": labels[i]} for i in bad]})
+    c["rubric_check"] = c["rubric_rounds"][-1]
+    return ok
+
+
+def rubric_feedback(c):
+    r = c["rubric_rounds"][-1]
+    if not r.get("result"):
+        return "要点の判定ができなかった。要点は、質問が尋ねている「なぜ」の中身（原因・根拠・目的）だけを、一節に書かれている言葉で短く書く"
+    if (r["result"] or {}).get("section_states_reason") is False:
+        return "一節が理由を述べていないのに理由を要点にしている。一節に理由が書かれていなければ answerable を false にする"
+    parts = [f"要点「{b['point']}」は{RUBRIC_FEEDBACK.get(b['label'], '理由になっていない')}" for b in r["bad"]]
+    return "；".join(parts) + "。要点は、質問が尋ねている「なぜ」の中身（原因・根拠・目的）だけにする"
 
 
 # ---------------------------------------------------------------- stage 2
@@ -468,6 +590,19 @@ def main():
         if c["scenario"] in ("S2", "S4", "S5"):
             stage_qgen(c)
     log("qgen", llm.stats)
+    # 1b. are the key points reasons? (S4; one more qgen for the rejected)
+    todo = [c for c in cands if c["scenario"] in RUBRIC_SCENARIOS and c["status"] == "candidate"]
+    for c in todo:
+        c["rubric_keep"] = stage_rubric(c)
+    again = [c for c in todo if not c["rubric_keep"]]
+    for c in again:
+        stage_qgen(c, feedback=rubric_feedback(c))
+        if c["status"] == "candidate":
+            c["rubric_keep"] = stage_rubric(c)
+    for c in todo:
+        if c["status"] == "candidate" and not c["rubric_keep"]:
+            c["status"] = "rubric_rejected"
+    log("rubric", llm.stats)
     add_distractors(cands)
     live = [c for c in cands if c["status"] == "candidate"]
     # 2. paraphrase
@@ -532,6 +667,11 @@ def main():
         if any(any(str(x).startswith("(答え") for x in (at.get("leak") or []))
                for at in c.get("attempts") or []):
             stats[k]["point_leak_rejected"] += 1
+        rr = c.get("rubric_rounds") or []
+        if rr:
+            stats[k]["rubric_checked"] += 1
+            stats[k]["rubric_first_round_keep"] += bool(rr[0]["keep"])
+            stats[k]["rubric_kept_after_retry"] += len(rr) > 1 and bool(rr[-1]["keep"])
     json.dump({"stats": {k: dict(v) for k, v in stats.items()}, "llm": llm.stats,
                "models": {"gen": llm.GEN_MODEL, "check": llm.CHECK_MODEL}},
               open(os.path.join(PHRASED, a.split, "stats.json"), "w"), ensure_ascii=False, indent=1)
