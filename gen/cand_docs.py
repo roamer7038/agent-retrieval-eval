@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Candidates for the scenarios whose gold is a place in the documents: S4
 (design reasons), S5 (procedures), S7 on documents (enumerations from the
-frontmatter) and S9 (documents <-> code).
+frontmatter) and S9 (documents <-> code, including one step of indirection).
 
     gen/cand_docs.py [--split dev] [--scenario S4,S5,S7,S9]
 
@@ -12,10 +12,12 @@ to a person. S7 counts pages from the parsed YAML frontmatter. S9 links a
 term the documents write in backticks (a setting key, a rule name) to the Go
 files that hold the same string literal or struct tag (goanalyze
 -parse-only), and back. "Handles" is read widely there: a file that reads or
-writes the value, or changes what it does by the value, handles the term; a
+writes the value, or changes what it does by the value, handles the term, and
+so does a file that takes the value from a short function that returns it
+(one hop in the call graph of gen/analyze.sh, the graph S3 uses); a
 file where the name only sits in a list is not the gold (gen/judge.py
-s9check asks two judges, s9apply moves the ones they both call a list into
-the optional part of the gold).
+s9check asks the judge, s9apply moves the ones it calls a list into the
+optional part of the gold).
 Output: gold-work/cand/<split>/S4.jsonl, S5.jsonl, S7-docs.jsonl, S9.jsonl
 """
 import argparse
@@ -29,7 +31,11 @@ import yaml
 from common import CAND, OUT, dropped_base_ids, is_test_path, read_jsonl, repo_dir, rng, split_of, write_jsonl
 
 # What "handles" means for S9, in the question and in the judge's prompt.
-S9_HANDLE_JA = "その値を読み書きするか、その値によって処理を変えるファイル（名前が一覧に並ぶだけのファイルは含めない）"
+# It covers one step of indirection: a file that takes the value from a short
+# function that returns it (a getter) handles it as much as a file that reads
+# the field (the decision of 2026-09-20 on S9).
+S9_HANDLE_JA = ("その値を読み書きするか、その値によって処理を変えるファイル"
+                "（値を返す短い関数を通して受け取って使う場合も含む。名前が一覧・表・コメントに並ぶだけのファイルは含めない）")
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 HEAD = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
@@ -197,12 +203,17 @@ def s4(split, corpus, n):
     r = rng(split, "S4", corpus)
     pool = []
     if corpus == "c1":
-        for f in md_files("c1", "wiki", ["projects"], [r"/raw/"]):
+        # the whole wiki, and a section that states a reason twice counts even
+        # without a reason heading (the rule of c2 and c4): with the sections
+        # the audits of PE2b threw away, the projects/ pool alone had two
+        # sections left in dev
+        for f in md_files("c1", "wiki", ["projects", "global", "machines"], [r"/raw/"]):
             _, secs = sections("c1", "wiki", f)
             for s in secs:
                 adr = "/decisions/adr-" in f
                 if (adr and re.search(r"(?i)^(context|decision|決定|背景|理由)", s["heading"])) or \
-                        (not adr and REASON_HEAD.search(s["heading"]) and REASON_TEXT.search(s["text"])):
+                        (not adr and REASON_TEXT.search(s["text"]) and
+                         (REASON_HEAD.search(s["heading"]) or len(REASON_TEXT.findall(s["text"])) >= 2)):
                     if 80 <= len(s["text"]) <= 4000:
                         pool.append(("wiki", s, None))
     elif corpus == "c2":
@@ -240,7 +251,7 @@ def s4(split, corpus, n):
     pool = [p for p in pool if split_of(f"{corpus}:S4:{p[1]['file']}:{p[1]['heading']}") == split]
     r.shuffle(pool)
     out, files, dropped = [], set(), dropped_base_ids()
-    want_code = 3 if corpus == "c2" else 0
+    want_code = n // 2 if corpus == "c2" else 0   # half from Go doc comments
     for repo, s, kind in pool:
         if len(out) == n:
             break
@@ -415,22 +426,152 @@ def cfg_fields(corpus, repo, files, term, window=30):
     return {f for f in fields if len(f) >= 8}
 
 
+def field_lines(corpus, repo, fields):
+    """(file, line) of every non-test line that reads one of those fields."""
+    out = []
+    for fld in sorted(fields):
+        got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-nE", rf"\.{fld}\b", "--", "*.go"],
+                             capture_output=True, text=True).stdout.splitlines()
+        for line in got:
+            f, ln = line.split(":", 2)[:2]
+            if not is_test_path(f) and ln.isdigit():
+                out.append((f, int(ln), fld))
+    return out
+
+
 def value_users(corpus, repo, fields, exclude):
     """The files that read one of those fields: the code whose behaviour the
     value changes, which the question asks for as well as the file that reads
     the key (the decision of 2026-09-20)."""
-    out = set()
-    for fld in sorted(fields):
-        got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-lE", rf"\.{fld}\b", "--", "*.go"],
-                             capture_output=True, text=True).stdout.split()
-        out |= {p for p in got if not is_test_path(p)}
+    out = {f for f, _, _ in field_lines(corpus, repo, fields)}
     return sorted(out - set(exclude))
 
 
-def mentions(corpus, repo, term, exclude, ext=("*.go", "*.ini", "*.md", "*.ts", "*.tsx")):
+# What counts as a way of reading a value rather than a piece of work of its
+# own. `func (cfg *Cfg) GetContentDeliveryURL(prefix string) (string, error)`
+# is one: a method (so the value comes from its own receiver, not from a
+# configuration handed to it), 12 lines, and it gives the caller a value back.
+# The audit of PE2c measured why each part is needed: without them the hop
+# picks up constructors that are handed the whole configuration
+# (`NewEvaluatorFactory(cfg, ...)`), helpers that turn a setting into
+# something else for everyone (`GetGravatarUrl(cfg, email)`), and functions
+# that only report an error (`declareFixedRoles`), none of which give their
+# caller the value of the setting (results/pe2c.md).
+ACCESSOR_MAX_LINES = 12
+
+
+REPO_OF = {"c1": ("c1", "wikictl"), "c2": ("c2", "grafana"), "c3": ("c3", "linux")}
+
+
+def returns_a_value(corpus, path, line, most=5):
+    """True when the function declared at that line gives its caller something
+    other than an error. Read from the declaration, which the analyzer does
+    not keep: the text between the end of the parameters and the brace."""
+    c, repo = REPO_OF[corpus]
+    try:
+        lines = open(os.path.join(repo_dir(c, repo), path), errors="replace").read().split("\n")
+    except OSError:
+        return False
+    text = "\n".join(lines[line - 1:line - 1 + most])
+    depth, groups, start, brace = 0, [], None, None
+    for i, ch in enumerate(text):
+        if ch == "(":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                groups.append((start, i))
+        elif ch == "{" and depth == 0:
+            brace = i
+            break
+    if brace is None or len(groups) < 2:   # not a method declaration
+        return False
+    res = text[groups[1][1] + 1:brace].strip().strip("()").strip()
+    return any(r.strip().split()[-1] != "error" for r in res.split(",") if r.strip())
+
+
+class GoGraph:
+    """The call graph of a corpus (gen/analyze.sh, the same records S3 uses),
+    loaded once: which functions a line belongs to, and who calls them."""
+    _cache = {}
+
+    def __init__(self, corpus):
+        self.corpus = corpus
+        self.defs_by_file = collections.defaultdict(list)
+        self.callers = collections.defaultdict(set)
+        self.loose = collections.defaultdict(set)
+        self.generated = set()
+        for r in read_jsonl(os.path.join(OUT, f"{corpus}-go.jsonl")):
+            if r["rec"] == "def":
+                if r.get("generated"):
+                    self.generated.add(r["file"])
+                if r["kind"] in ("func", "method") and not r["test"]:
+                    self.defs_by_file[r["file"]].append(r)
+            elif r["rec"] == "call" and not r["test"] and r.get("callee_pkg"):
+                # a call, not a reference: a file that hands the function over
+                # as a value (a route handler, a wiring table) never receives
+                # what it returns. A call the compiler resolves to this very
+                # function ("static") is kept apart from one an analysis of the
+                # possible types reaches ("vta", "invoke", "dynamic"), which
+                # says the call may land here, not that it does: S3 treats
+                # those as optional callers and S9 does the same.
+                (self.callers if r["kind"] == "static" else self.loose)[
+                    (r["callee_pkg"], r["callee"])].add(r["file"])
+
+    @classmethod
+    def get(cls, corpus):
+        if corpus not in cls._cache:
+            cls._cache[corpus] = cls(corpus)
+        return cls._cache[corpus]
+
+    def accessors(self, lines):
+        """The short methods that hold one of those (file, line) reads and
+        give a value back: a way for another file to read the setting."""
+        out = []
+        for f, ln, fld in lines:
+            for d in self.defs_by_file.get(f, ()):
+                if (d["kind"] == "method" and d["line"] <= ln <= d["end"]
+                        and d["end"] - d["line"] + 1 <= ACCESSOR_MAX_LINES
+                        and returns_a_value(self.corpus, f, d["line"])):
+                    out.append((d, fld))
+        return out
+
+    def hops(self, lines, exclude, loose=False):
+        """One step of indirection: the files that call a short method that
+        reads the value (a getter), so they take the value without naming the
+        key or the field. Returns {file: the getter it calls}; with loose the
+        calls that only an analysis of the possible types reaches, which
+        belong in the optional part of the gold."""
+        out, src = {}, self.loose if loose else self.callers
+        for d, fld in self.accessors(lines):
+            for f in sorted(src.get((d["pkg"], d["id"]), ())):
+                # generated code (the wiring of the dependency injector) calls
+                # such a function without using the value
+                if not is_test_path(f) and f not in exclude and f not in self.generated:
+                    out.setdefault(f, d["id"])
+        return out
+
+
+def camel(term):
+    """The camelCase spelling of a setting key, as the frontend writes it
+    (`signout_redirect_url` -> `signoutRedirectUrl`)."""
+    parts = [p for p in re.split(r"[_.\-]+", term) if p]
+    return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:]) if len(parts) > 1 else term
+
+
+def mentions(corpus, repo, term, exclude, ext=("*.go", "*.ini", "*.md", "*.ts", "*.tsx"), also=()):
     """Files that write the term but do not handle it: naming one is neither
-    required nor wrong (gold "optional")."""
-    got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-lF", term, "--", *ext],
+    required nor wrong (gold "optional"). The other spellings of the same
+    thing (the camelCase key, the struct field it is kept in) go in too, so
+    that a file which carries the value without being required does not count
+    against an answer."""
+    words = {term, camel(term)} | set(also)
+    args = []
+    for w in sorted(words):
+        args += ["-e", w]
+    got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-lF", *args, "--", *ext],
                          capture_output=True, text=True).stdout.split()
     return sorted({p for p in got if not is_test_path(p)} - set(exclude))
 
@@ -488,21 +629,36 @@ def s9(split, corpus, n):
         if direction == "doc2code":
             # the files that read the key, plus the files whose behaviour the
             # value changes (they hold the field, not the string), which the
-            # review of PE2b found missing from the gold
+            # review of PE2b found missing from the gold, plus one step of
+            # indirection: the files that take the value from a short function
+            # that returns it (PE2c; the call graph is the one S3 uses)
             fields = cfg_fields(corpus, code_repo, code, t)
-            users = value_users(corpus, code_repo, fields, code) if fields else []
-            if corpus == "c2" and (not fields or len(users) > 4):
+            flines = field_lines(corpus, code_repo, fields) if fields else []
+            users = sorted({f for f, _, _ in flines} - set(code))
+            hops = GoGraph.get(corpus).hops(flines, set(code) | set(users)) if flines else {}
+            if corpus == "c2" and (not fields or len(users) + len(hops) > 4):
                 continue  # the value cannot be followed to its users: not askable
-            want = sorted(set(code) | set(users))
+            want = sorted(set(code) | set(users) | set(hops))
+            # the word that shows why each file is in the gold, for the judge
+            # (s9check) to look at: an indirect file never writes the key
+            gold_terms = {f: ([t] if f in code else []) + sorted(fields) +
+                          ([hops[f].split(".")[-1]] if f in hops else []) for f in want}
+            via = {f: ("key" if f in code else "getter" if f in hops else "field") for f in want}
             where = f"wiki の `{s['file']}`" if corpus == "c1" else f"Grafana の設定の文書（`{s['file']}`）の `[{s.get('parent', '')}]` の節"
             q = (f"{where} で説明されている `{t}` を、{code_repo} のソースコードのどのファイルが扱っているか"
                  f"（{S9_HANDLE_JA}）。")
+            # a call that only an analysis of the possible types reaches is
+            # neither required nor wrong, like the optional callers of S3
+            loose = GoGraph.get(corpus).hops(flines, set(want), loose=True) if flines else {}
             gold = {"type": "files", "repo": code_repo, "value": want,
-                    "optional": mentions(corpus, code_repo, t, want)}
+                    "optional": sorted(set(mentions(corpus, code_repo, t, want, also=sorted(fields))) | set(loose))}
             ev = [f"{code_repo}/{c}" for c in want]
             fmt = f"{code_repo} リポジトリの根からのファイルのパスの一覧"
-            ptask = "文書で説明されている次の設定・項目を、ソースコードのどのファイルが扱っている（値を読み書きする、値で処理を変える）かを尋ねる質問"
+            ptask = ("文書で説明されている次の設定・項目を、ソースコードのどのファイルが扱っている"
+                     "（値を読み書きする、値で処理を変える、値を返す関数を通して受け取って使う）かを尋ねる質問")
         else:
+            gold_terms = {p: [t] for p in pages}
+            via = {p: "page" for p in pages}
             q = (f"{code_repo} のソースコード（`{code[0]}`）が扱っている `{t}` について、"
                  f"その内容を説明している文書のページはどれか（名前が一覧に並ぶだけのページは含めない）。")
             gold = {"type": "files", "repo": repo, "value": pages, "match": "any",
@@ -518,15 +674,21 @@ def s9(split, corpus, n):
                        "check": "文書の記述とコードの対応が正しいか（同じ文字列でも別の意味で使っていないか）。"
                                 f"正解のファイルが「{S9_HANDLE_JA}」に当たるか（当たらないものは gold.optional へ）"},
             "source": {"method": "backticked term in a document == Go string literal / struct tag (go/parser); "
-                                 "for doc2code also the files that read the struct field the value is kept in",
-                       "code_files": code, "doc_sections": [(x["file"], x["line"]) for x in secs][:10]},
+                                 "for doc2code also the files that read the struct field the value is kept in, "
+                                 "and the files that call a short function returning it (call graph, one hop)",
+                       "code_files": code, "doc_sections": [(x["file"], x["line"]) for x in secs][:10],
+                       "gold_via": via, "gold_terms": gold_terms},
         })
         item["evidence_accept"] = ev
         out.append(item)
     return out
 
 
-N = {"S4": {"c1": 8, "c2": 6, "c4": 6}, "S5": {"c1": 6, "c2": 6, "c4": 8}, "S7": {"c1": 4, "c4": 5},
+# S4 draws three times as deep as the other scenarios (the decision of
+# 2026-09-20): its candidates are thrown away by the audit and by the check on
+# the paraphrase more often than the rest, and the number of bases is what
+# suffers. Drawing deeper is the same answer that worked for S8 in PE2b.
+N = {"S4": {"c1": 24, "c2": 18, "c4": 18}, "S5": {"c1": 6, "c2": 6, "c4": 8}, "S7": {"c1": 4, "c4": 5},
      "S9": {"c1": 8, "c2": 8}}
 
 

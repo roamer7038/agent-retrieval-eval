@@ -68,7 +68,11 @@ def dropped_base_ids():
     """Candidates whose gold an audit found wrong, or whose question the audit
     found invalid (results/pe2-audit.jsonl). The generators skip them and draw
     another candidate in their place, so a question that was thrown away does
-    not come back when the generators run again."""
+    not come back when the generators run again. The last record of a base
+    decides, and the verdict "regenerate" brings one back: PE2c uses it for
+    the S4 bases of c1 whose section and key points an audit passed and whose
+    paraphrase alone was the problem, where the corpus holds no other
+    candidate to draw (results/pe2c.md)."""
     global _DROPPED
     if _DROPPED is None:
         _DROPPED = set()
