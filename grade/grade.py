@@ -39,6 +39,7 @@ with "/" accepts every file under it, and a path may be a glob (fnmatch). A
 question with an empty list has no evidence to check.
 """
 import argparse
+import collections
 import csv
 import fnmatch
 import json
@@ -325,7 +326,7 @@ def grade(d, qs, judged=None):
     row["shell_commands"] = len(cmds)
     row["shell_ms"] = sum(c["ms"] for c in cmds)
     row["shell_stdout_bytes"] = sum(c["stdout_bytes"] for c in cmds)
-    row["shell_by_cmd"] = {c["cmd"]: row.get("shell_by_cmd", {}).get(c["cmd"], 0) + 1 for c in cmds}
+    row["shell_by_cmd"] = dict(collections.Counter(c["cmd"] for c in cmds))
     row.update(tool_usage(meta["cond"], tools, tool_bytes, cmds))
     return row
 

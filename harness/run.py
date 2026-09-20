@@ -13,7 +13,8 @@ to $ARE_RUNS (default ../agent-retrieval-eval-runs)/<label>/<question>-<cond>-<m
   stream.jsonl   Claude Code's stream-json output
   stderr.txt
   work/          /workspace, with answer.json
-  corpus/        /corpus (and /work), a copy of the pinned corpus
+  corpus/        /corpus (and /work), a copy of the pinned corpus, deleted
+                 after the session unless $ARE_KEEP_CORPUS=1
   bin/           logging wrappers of the shell commands, first on PATH
   log/           cmdlog.tsv of the wrappers
   idx/<tool>/    the writable upper layer over the tool's index (L2)
@@ -67,6 +68,8 @@ CPUS = os.environ.get("ARE_CPUS", "8")
 MEMORY = os.environ.get("ARE_MEMORY", "24g")
 # Per-session ceiling Claude Code itself enforces (a guard, not the budget).
 BUDGET_USD = os.environ.get("ARE_BUDGET_USD", "5")
+# The copy of the corpus is deleted after the session unless this is set.
+KEEP_CORPUS = os.environ.get("ARE_KEEP_CORPUS") == "1"
 
 ANTHROPIC_MODELS = {"sonnet": "claude-sonnet-5", "opus": "claude-opus-5", "haiku": "claude-haiku-4-5-20251001"}
 LOGGED_COMMANDS = ["grep", "rg", "find", "fd", "tree", "cat", "sed", "git", "head", "tail", "wc", "ls", "awk"]
@@ -471,6 +474,18 @@ def run_session(qid, cond, model, rep, label):
         # the upper layer stays in the session's directory as a record.
         for vol in volumes:
             subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
+        if volumes:
+            # The overlay's work directory belongs to root (the kernel makes
+            # it), which would stop the session's directory from ever being
+            # removed; root in a container can take it away. The upper layer
+            # stays as the record of what the tool wrote.
+            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx",
+                            image, "sh", "-c", "rm -rf /idx/*/ovl"], capture_output=True)
+        # The copy of the corpus is the largest part of a session (c2 is 2.3 GB)
+        # and can be made again from the pinned commit, so it goes unless
+        # ARE_KEEP_CORPUS is set.
+        if not KEEP_CORPUS:
+            shutil.rmtree(os.path.join(d, "corpus"), ignore_errors=True)
     meta.update({"wall_ms": int((time.time() - start) * 1000), "exit": rc, "timed_out": timed_out,
                  "finished_at": now()})
     with open(os.path.join(d, "meta.json"), "w") as f:
@@ -497,6 +512,13 @@ def smoke(qid, cond, argv):
     finally:
         for vol in volumes:
             subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
+        if volumes:
+            # The overlay's work directory belongs to root (the kernel makes
+            # it), which would stop the session's directory from ever being
+            # removed; root in a container can take it away. The upper layer
+            # stays as the record of what the tool wrote.
+            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx",
+                            image, "sh", "-c", "rm -rf /idx/*/ovl"], capture_output=True)
     print(f"# session dir: {d}", file=sys.stderr)
     return rc
 
