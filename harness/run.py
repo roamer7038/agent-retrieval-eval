@@ -108,6 +108,8 @@ TOOLS = {
     "codebase-memory-mcp": dict(
         kind="mcp", family="グラフ", index="codebase-memory-mcp", server="codebase-memory",
         command="/usr/local/bin/codebase-memory-mcp", args=[],
+        # 索引はセッションの中では作らせない（統括の決定）。壊す道具も外す。
+        disallow=["index_repository", "delete_project", "ingest_traces", "manage_adr"],
         env={"HOME": "/idx/codebase-memory-mcp/home", "PATH": "/usr/local/bin:/usr/bin:/bin"},
         variants={"c3": "mem12g"}, extra_env={"c3": {"CBM_MEM_BUDGET_MB": "12288"}},
         corpora=["c1", "c2", "c3", "c4"]),
@@ -116,6 +118,8 @@ TOOLS = {
         command="/opt/serena/bin/serena",
         args=["start-mcp-server", "--context", "ide-assistant", "--transport", "stdio",
               "--project", "{PROJECT}"],
+        # シェルの記録を迂回する道具だけ外す（編集の道具は Serena 本来の形として残す）。
+        disallow=["execute_shell_command"],
         env={"HOME": "/idx/serena/home",
              "PATH": "/opt/serena/bin:/opt/go/bin:/opt/go-tools/bin:/opt/clangd/bin:/opt/node/bin:"
                      "/usr/local/bin:/usr/bin:/bin"},
@@ -367,9 +371,11 @@ def claude_args(d, cond, model_id):
     # its being configured and are allowed by name in --allowedTools.
     allowed = list(AGENT_TOOLS) + [f"mcp__{TOOLS[t]['server']}" for t in cond_tools(cond)
                                    if TOOLS[t]["kind"] == "mcp"]
+    denied = list(DISALLOWED) + [f"mcp__{TOOLS[t]['server']}__{x}" for t in cond_tools(cond)
+                                 for x in TOOLS[t].get("disallow", [])]
     args = ["claude", "-p", "--model", model_id, "--output-format", "stream-json", "--verbose",
             "--tools", ",".join(AGENT_TOOLS), "--allowedTools", ",".join(allowed),
-            "--disallowedTools", ",".join(DISALLOWED), "--permission-mode", "dontAsk",
+            "--disallowedTools", ",".join(denied), "--permission-mode", "dontAsk",
             "--strict-mcp-config", "--max-budget-usd", BUDGET_USD,
             "--settings", json.dumps({"autoMemoryEnabled": False})]
     if os.path.exists(os.path.join(d, "mcp.json")):
