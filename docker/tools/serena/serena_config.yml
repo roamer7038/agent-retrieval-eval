@@ -1,0 +1,37 @@
+# Serena's global configuration for the L0 runs (copied to $HOME/.serena).
+# Differences from Serena's template: no dashboard, no GUI log window, and the
+# language servers that Serena would otherwise download at run time point at
+# the copies installed in the image.
+language_backend: LSP
+line_ending: native
+gui_log_window: false
+web_dashboard: false
+web_dashboard_open_on_launch: false
+web_dashboard_interface:
+web_dashboard_listen_address: 127.0.0.1
+web_dashboard_trusted_hosts: [127.0.0.1, localhost]
+jetbrains_plugin_server_address: 127.0.0.1
+jetbrains_launch_command:
+log_level: 20
+trace_lsp_communication: false
+ls_specific_settings:
+  typescript:
+    ls_path: /opt/ts-lsp/node_modules/.bin/typescript-language-server
+  cpp:
+    ls_path: /opt/clangd/bin/clangd
+ls_priorities:
+ignored_paths: []
+read_only_memory_patterns: []
+ignored_memory_patterns: []
+tool_timeout: 600
+excluded_tools: []
+included_optional_tools: []
+fixed_tools: []
+base_modes:
+default_modes:
+default_max_tool_answer_chars: 150000
+token_count_estimator: CHAR_COUNT
+symbol_info_budget: 10
+project_serena_folder_location: "$projectDir/.serena"
+trusted_project_path_patterns: ["/work/**"]
+projects: []
