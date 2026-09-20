@@ -25,7 +25,8 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
 | `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`） |
 | `harness/run.py` の `CONDS`・`TOOLS` | L2 の条件（A0〜A7）と、条件ごとの道具・渡し方・索引 |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体、`pe4-l2.md` はエージェント経由） |
+| `pe5/` | PE5（較正）。問題の層化抽出と無作為の順の駆動（`run.py`）、分散の成分と道具の使用率（`analyze.py`）、検出力（`power.py`）、MCP の握手の時間（`mcp_startup.py`） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md`・`pe2d.md` は正解の作り方と監査、`pe3-l1.*` は検索単体、`pe4-l2.*` はエージェント経由、`pe5.md`・`pe5-*` は較正と事前登録の草案） |
 
 ## 使い方
 
@@ -65,6 +66,8 @@ l1/grade.py table                            # 道具 × シナリオ（nDCG@10�
 - L2 の条件は A0（題材を渡さない）・A1（標準）・A2〜A7（A1 ＋ 系統の代表の道具 1 つ）。道具は本来の渡し方で渡す（CLI は PATH に、MCP は `--mcp-config` で）。索引は L0 が作ったものを下層にした overlay で渡すので、道具は書けるが索引そのものは変わらず、セッションの中では索引を作らない。
 - 題材の複製は `/corpus`（課題文が指す道具）と `/work`（索引を作ったときのパス）の両方に見える。同じファイルで、道具の出力は後者を指すことがある。
 - 条件ごとの環境の説明は `tasks/env/A*.md`。道具の説明は「名前・何ができるか・呼び出し方の 1 例」の 2 行に揃える（手順の指南は書かない）。
+- **L2 の費用の主要な指標は、プロンプトキャッシュが無かったとして数え直した額**（`pe5/analyze.py` の `usd_nocache`。入力・キャッシュ読み・キャッシュ書きをすべて入力の単価で数える）。請求どおりの額（`grade/grade.py` の `usd`）は順番とキャッシュの有効期限で 1.5 倍動くので副次に回す。根拠は `results/pe5.md` 第 2 節。
+- PE5 の較正は `pe5/run.py block --block <cacheA|cacheB|var|tools|tools2>`。費用の上限（`--limit`、既定は `ARE_PE5_BUDGET_USD`）を超えるとブロックは止まる。同じ升目を別のブロックで流すときは `--round-offset` で回の番号をずらす。
 
 ## 問題と正解の生成
 
