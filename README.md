@@ -64,7 +64,7 @@ grade/selfcheck.py tasks/dev/pe2.jsonl /tmp/gradecheck   # 全問を採点でき
 - 問題の各行は、識別子を含む質問と言い換えの対（`phrasing`）、英訳（`question_en`）、言語の組み合わせ（`lang`）、正解（`gold`）、根拠として認める範囲（`evidence`。末尾が `/` なら配下すべて。何を根拠と認めるかの説明は `evidence_rule`）、正解の状態（`gold_status`: 抜き取りで監査する `machine`、人の確認が要る `needs_review`）、監査の結果（`audit`）を持つ。正解の種類は `grade/grade.py` の冒頭に書いた。
 - 監査の記録は `results/pe2-audit.jsonl`。最後の監査で正解の誤り（`error`）か問題として成り立たない（`invalid`）とされた候補は、`gen/build.py` が問題に入れず、生成器も次に引くときに飛ばして別の候補を引く。
 - テストとテスト用の代用品を除く規則は `gen/common.py` の `TEST_PATH`（S3・S7 の正解と質問文が同じものを使う）。S2 の「主のファイル」の規則は `gen/cand_git.py` の `main_file`。
-- LLM 判定者の試作は `gen/judge.py`（S4・S5 の自由記述の採点と、S9 の正解の選別）。別系統のモデル 2 つで判定し、割れたものを `split` として残す。結果は `results/pe2-gold.md`（1 回目）と `results/pe2b.md`（作り直し）。
+- LLM 判定者の試作は `gen/judge.py`（S4・S5 の自由記述の採点と、S9 の正解の選別）。別系統のモデル 2 つで判定し、割れたものを `split` として残す。結果は `results/pe2-gold.md`（1 回目）と `results/pe2b.md`（作り直し）。エージェントが付けた札は `results/pe2*-judge-human.jsonl`・`results/pe2*-s9-human.jsonl`。
 
 ## ライセンス
 

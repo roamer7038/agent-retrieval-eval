@@ -140,7 +140,7 @@ S9 では、2 人の判定者が割れた 5 件をエージェントが裁き、
 
 ### 7.1 自由記述の採点（S4・S5）
 
-20 問 × 4 種（gold・brief・other・none）＝ 80 件の回答を `ornith-1.5:35b` に書かせ、両判定者が採点した。エージェントの札（`results/pe2-judge-human.jsonl`、判定者の出力を見ずに付けた。true 29・false 51）との一致:
+20 問 × 4 種（gold・brief・other・none）＝ 80 件の回答を `ornith-1.5:35b` に書かせ、両判定者が採点した。エージェントの札（`results/pe2b-judge-human.jsonl`、判定者の出力を見ずに付けた。true 29・false 51）との一致:
 
 | 判定者 | n | 一致 | κ | 人が正答・LLM が誤答 | 人が誤答・LLM が正答 |
 |---|---|---|---|---|---|
@@ -153,7 +153,7 @@ S9 では、2 人の判定者が割れた 5 件をエージェントが裁き、
 
 ### 7.2 S9 の正解の選別
 
-29 件のファイルについて「扱っているか、名前が並ぶだけか」を両判定者が判定し、エージェントの札（`results/pe2-s9-human.jsonl`、28 件が「扱っている」）と比べた。
+29 件のファイルについて「扱っているか、名前が並ぶだけか」を両判定者が判定し、エージェントの札（`results/pe2b-s9-human.jsonl`、28 件が「扱っている」）と比べた。
 
 | 判定者 | n | 一致 | κ |
 |---|---|---|---|
@@ -204,4 +204,4 @@ gen/judge.py s9agree $ARE_DATA/gold-work/judge/dev/s9-human.jsonl           # S9
 grade/selfcheck.py tasks/dev/pe2.jsonl /tmp/gradecheck                      # 採点の確認
 ```
 
-記録: 監査は `results/pe2-audit.jsonl`（`sample` が `fresh-pe2b` は機械の正解の抜き取り、`review-pe2b*` は人の確認が要る正解の一次の監査）、札は `results/pe2-judge-human.jsonl`・`results/pe2-s9-human.jsonl`（どちらも `by: agent`）、S9 の割れたものの裁定は `results/pe2-s9-decisions.jsonl`。
+記録: 監査は `results/pe2-audit.jsonl`（`sample` が `fresh-pe2b` は機械の正解の抜き取り、`review-pe2b*` は人の確認が要る正解の一次の監査）、札は `results/pe2b-judge-human.jsonl`・`results/pe2b-s9-human.jsonl`（どちらも `by: agent`。PE2 のときの札は `pe2-*` のまま残してある）、S9 の割れたものの裁定は `results/pe2-s9-decisions.jsonl`。

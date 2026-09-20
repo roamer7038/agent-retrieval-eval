@@ -1,80 +1,80 @@
-{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:brief", "correct": false, "by": "agent", "note": "Dashboards/Playlists とダッシュボード追加は述べるが、Name フィールドへの名前入力を欠き Interval も曖昧"}
-{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:gold", "correct": true, "by": "agent", "note": "ADR-0002 の前提の投入と同じ扱い・導出に見せかけない の両要点を述べる"}
-{"answer_id": "dev-c4-s5-uction-environment-tools-kubeadm-high-availability-L244:none", "correct": false, "by": "agent", "note": "scp の一般論のみ。ssh-agent の設定と /etc/kubernetes/pki への移動を欠く"}
-{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:none", "correct": false, "by": "agent", "note": "競合・オーバーコミット防止という一般論で、実行できないノードへの配置回避・RAM/CPU のブロックを述べない"}
-{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:none", "correct": false, "by": "agent", "note": "port-forward とポート指定は述べるが、待機状態のため別ターミナルを使う点を欠く"}
-{"answer_id": "dev-c4-s5-plication-run-single-instance-stateful-application-L36:other", "correct": false, "by": "agent", "note": "PV/PVC の一般論のみで kubectl create -f と kubectl describe deployment mysql を欠く"}
-{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:gold", "correct": true, "by": "agent", "note": "両要点（実行できないノードへの配置回避、RAM/CPU のブロック）を述べる"}
-{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:other", "correct": false, "by": "agent", "note": "Azure Monitor のデータソース追加手順を述べており Contact point の手順ではない"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:gold", "correct": false, "by": "agent", "note": "Dashboards と Share は述べるが、共有したいダッシュボードを選ぶ手順を欠く"}
-{"answer_id": "dev-c4-s4--workloads-autoscaling-horizontal-pod-autoscale-md-L122:gold", "correct": true, "by": "agent", "note": "リソース使用状況の決定と HPA コントローラーのスケール判断の両要点を述べる"}
-{"answer_id": "dev-c2-s4-pkg-storage-unified-search-bleve-field-values-go-L237:gold", "correct": true, "by": "agent", "note": "丸められるため・インデックスは文字列で保存 の両要点を述べる"}
-{"answer_id": "dev-c4-s5-plication-run-single-instance-stateful-application-L36:gold", "correct": true, "by": "agent", "note": "PV/PVC と Deployment の kubectl create -f、describe deployment mysql をすべて述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:gold", "correct": true, "by": "agent", "note": "profiles、--profile/WIKICTL_PROFILE/match、--config/WIKICTL_CONFIG をすべて述べる"}
-{"answer_id": "dev-c4-s5-plication-run-single-instance-stateful-application-L36:none", "correct": false, "by": "agent", "note": "kubectl コマンドを一切挙げない一般論"}
-{"answer_id": "dev-c2-s5--sources-datasources-azure-monitor-configure-index-L56:other", "correct": false, "by": "agent", "note": "回答不能として手順を述べていない"}
-{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:none", "correct": false, "by": "agent", "note": "画面名・ボタン名の具体を欠く一般論"}
-{"answer_id": "dev-c4-s5-tent-ja-docs-tasks-administer-cluster-kms-provider-L356:gold", "correct": true, "by": "agent", "note": "kms を最初のエントリに追加、kube-apiserver 再起動、kubectl replace による再暗号化をすべて述べる"}
-{"answer_id": "dev-c2-s5--sources-datasources-azure-monitor-configure-index-L56:gold", "correct": true, "by": "agent", "note": "Connections、Add new connection と Azure Monitor 検索・選択、Add new data source をすべて述べる"}
-{"answer_id": "dev-c4-s4-content-ja-docs-concepts-configuration-secret-md-L1068:other", "correct": false, "by": "agent", "note": "回答不能として理由を述べていない"}
-{"answer_id": "dev-c1-s5-projects-wikictl-evaluations-qmd-integration-gaps-L38:brief", "correct": false, "by": "agent", "note": "段階3の一部のみ。qmd あり条件の計測と使用率、精度と使用の区別、non-goals の判断を欠く"}
-{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:brief", "correct": false, "by": "agent", "note": "要点1のみで、RAM/CPU をブロックする点を欠く"}
-{"answer_id": "dev-c4-s5-tent-ja-docs-tasks-administer-cluster-kms-provider-L356:brief", "correct": true, "by": "agent", "note": "kms を最初のエントリに、kube-apiserver 再起動、kubectl replace の3点を述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-evaluations-qmd-integration-gaps-L38:none", "correct": false, "by": "agent", "note": "一般的な判断基準のみで、wikictl-eval・#196・non-goals の具体を欠く"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:brief", "correct": false, "by": "agent", "note": "profiles と --profile 等は述べるが、--config/WIKICTL_CONFIG を欠く"}
-{"answer_id": "dev-c4-s4--workloads-autoscaling-horizontal-pod-autoscale-md-L122:brief", "correct": true, "by": "agent", "note": "使用状況の決定と HPA コントローラーのスケール判断の両要点を述べる"}
-{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:brief", "correct": true, "by": "agent", "note": "両要点を述べる"}
-{"answer_id": "dev-c4-s5-uction-environment-tools-kubeadm-high-availability-L244:other", "correct": false, "by": "agent", "note": "回答不能として手順を述べていない"}
-{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:brief", "correct": true, "by": "agent", "note": "any の配列として推論される点を述べる"}
-{"answer_id": "dev-c4-s5-tent-ja-docs-tasks-administer-cluster-kms-provider-L356:other", "correct": false, "by": "agent", "note": "回答不能とし、参考文書を containerd の手順だと誤認している"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:brief", "correct": true, "by": "agent", "note": "Dashboards、対象ダッシュボード、ドロップダウンではなく Share の3点を述べる"}
-{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:none", "correct": false, "by": "agent", "note": "any の配列として推論される点を述べず、可読性・安全性の一般論にとどまる"}
-{"answer_id": "dev-c4-s5-tent-ja-docs-tasks-administer-cluster-kms-provider-L356:none", "correct": false, "by": "agent", "note": "kms の最初のエントリ、kube-apiserver 再起動、kubectl replace の具体を欠く"}
-{"answer_id": "dev-c2-s5--sources-datasources-azure-monitor-configure-index-L56:brief", "correct": false, "by": "agent", "note": "Connections のみで残り2点を欠く"}
-{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:gold", "correct": true, "by": "agent", "note": "port-forward とポート指定に加え、別ターミナルでの作業も述べる（待機状態の明示はなく、要点3の扱いで迷った）"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:none", "correct": false, "by": "agent", "note": "Slideshow プラグイン等、文書にない手順で Playlists の手順を述べない"}
-{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:gold", "correct": true, "by": "agent", "note": "any[] として推論される点を述べる"}
-{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:brief", "correct": false, "by": "agent", "note": "port-forward とポート指定のみで、待機状態・別ターミナルを欠く"}
-{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:gold", "correct": true, "by": "agent", "note": "TLS/SSL Mode、CA 証明書の追加、証明書チェーンの確認をすべて述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:other", "correct": false, "by": "agent", "note": "qmd 検証文書の内容を流用しており profiles の手順を述べない"}
-{"answer_id": "dev-c2-s5--sources-datasources-azure-monitor-configure-index-L56:none", "correct": false, "by": "agent", "note": "Configuration > Data Sources という文書と異なる経路を述べている"}
-{"answer_id": "dev-c2-s4-pkg-storage-unified-search-bleve-field-values-go-L237:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s5-igrating-from-dockershim-change-runtime-containerd-L35:other", "correct": false, "by": "agent", "note": "質問の言い換えのみで containerd.io・mkdir・config default の具体がない"}
-{"answer_id": "dev-c4-s5-plication-run-single-instance-stateful-application-L36:brief", "correct": false, "by": "agent", "note": "Deployment と PVC の概要のみで kubectl コマンド3点を欠く"}
-{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:other", "correct": false, "by": "agent", "note": "回答不能とした上、文書にない Slideshow 等を挙げている"}
-{"answer_id": "dev-c4-s4--workloads-autoscaling-horizontal-pod-autoscale-md-L122:none", "correct": true, "by": "agent", "note": "使用率の算出とスケール判断に使うという両要点を述べる（HPA コントローラーを「スケーラー」と表現しており迷った）"}
-{"answer_id": "dev-c2-s4-pkg-storage-unified-search-bleve-field-values-go-L237:brief", "correct": true, "by": "agent", "note": "丸められるため文字列で保持しパースする、の両要点を述べる"}
-{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:brief", "correct": false, "by": "agent", "note": "TLS/SSL Mode のみで、CA 証明書の追加と証明書チェーンの確認を欠く"}
-{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:none", "correct": false, "by": "agent", "note": "grafana.ini の ssl_mode/ssl_ca という別の設定を述べ、データソース設定項目と食い違う"}
-{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:brief", "correct": false, "by": "agent", "note": "Add contact point 以降は述べるが、Alerts & IRM -> Alerting -> Notification configuration と Contact points タブへの移動を欠く"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s5-uction-environment-tools-kubeadm-high-availability-L244:gold", "correct": true, "by": "agent", "note": "ssh-agent の設定、scp による証明書コピー、/etc/kubernetes/pki への移動をすべて述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-evaluations-qmd-integration-gaps-L38:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s5-igrating-from-dockershim-change-runtime-containerd-L35:none", "correct": false, "by": "agent", "note": "containerd.io の導入元と containerd config default による生成を欠く一般論"}
-{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:gold", "correct": true, "by": "agent", "note": "移動先、Add contact point と名前、Webhook と URL、Save contact point をすべて述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:gold", "correct": true, "by": "agent", "note": "wikictl context の実行と profile・profile_source の確認を述べる"}
-{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:none", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s5-igrating-from-dockershim-change-runtime-containerd-L35:brief", "correct": false, "by": "agent", "note": "containerd.io の導入と config.toml 生成は述べるが、mkdir -p /etc/containerd を欠く（迷った）"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:none", "correct": false, "by": "agent", "note": "文書にない --repo 等を挙げ、profiles の仕組みを述べない"}
-{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:brief", "correct": true, "by": "agent", "note": "LDAP 検索にユーザー情報が要るという文書の理由を述べる（要点2はその裏返しとみなした。迷った）"}
-{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s4-content-ja-docs-concepts-configuration-secret-md-L1068:gold", "correct": true, "by": "agent", "note": "Base64 は暗号化でなく平文同様という両要点を述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:brief", "correct": true, "by": "agent", "note": "wikictl context の profile と profile_source を述べる"}
-{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:none", "correct": false, "by": "agent", "note": "getent など無関係の手順で wikictl context を述べない"}
-{"answer_id": "dev-c4-s4-content-ja-docs-concepts-configuration-secret-md-L1068:none", "correct": false, "by": "agent", "note": "Base64 が暗号化でない・平文同様という点を述べず、文書にない解読リスクを加えている"}
-{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:gold", "correct": true, "by": "agent", "note": "LDAP 検索にユーザー情報が必要なため single bind が使えないと述べる"}
-{"answer_id": "dev-c2-s4-pkg-storage-unified-search-bleve-field-values-go-L237:none", "correct": false, "by": "agent", "note": "数値だと丸められるため文字列で保存している、という理由を述べていない"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:gold", "correct": true, "by": "agent", "note": "Dashboards/Playlists、New playlist と Name、Interval、Add dashboards と Save をすべて述べる"}
-{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:none", "correct": false, "by": "agent", "note": "各ユーザーの資格情報という文書にない理由を述べ、検索にユーザー情報が要る点を欠く"}
-{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c1-s5-projects-wikictl-evaluations-qmd-integration-gaps-L38:gold", "correct": true, "by": "agent", "note": "計測条件、精度と使用の区別、#196 と skill の検討、non-goals の判断をすべて述べる"}
-{"answer_id": "dev-c4-s5-igrating-from-dockershim-change-runtime-containerd-L35:gold", "correct": true, "by": "agent", "note": "containerd.io の導入、mkdir -p /etc/containerd、config default による生成をすべて述べる"}
-{"answer_id": "dev-c4-s4-content-ja-docs-concepts-configuration-secret-md-L1068:brief", "correct": true, "by": "agent", "note": "Base64 は暗号化でなく平文同様という両要点を述べる"}
-{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c4-s4--workloads-autoscaling-horizontal-pod-autoscale-md-L122:other", "correct": false, "by": "agent", "note": "回答不能としている"}
-{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:none", "correct": false, "by": "agent", "note": "文書にない操作で Dashboards/Share の手順を述べない"}
-{"answer_id": "dev-c4-s5-uction-environment-tools-kubeadm-high-availability-L244:brief", "correct": false, "by": "agent", "note": "scp は述べるが ssh-agent の設定と /etc/kubernetes/pki への移動を欠く"}
+{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-ions-adr-0008-two-layers-research-group-subject-md-L24:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-feature-toggles-md-L191:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-feature-toggles-md-L191:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-feature-toggles-md-L191:other", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-feature-toggles-md-L191:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-s-debug-debug-cluster-resource-metrics-pipeline-md-L38:gold", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-s-debug-debug-cluster-resource-metrics-pipeline-md-L38:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-s-debug-debug-cluster-resource-metrics-pipeline-md-L38:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-s-debug-debug-cluster-resource-metrics-pipeline-md-L38:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-operations-L13:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:gold", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-share-dashboards-panels-index-L84:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-content-ja-docs-tasks-debug-debug-cluster-windows-L109:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s5-content-ja-docs-tasks-debug-debug-cluster-windows-L109:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s5-content-ja-docs-tasks-debug-debug-cluster-windows-L109:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-content-ja-docs-tasks-debug-debug-cluster-windows-L109:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-dr-0007-external-benchmarks-as-measurement-need-md-L9:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-dr-0007-external-benchmarks-as-measurement-need-md-L9:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-dr-0007-external-benchmarks-as-measurement-need-md-L9:other", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-dr-0007-external-benchmarks-as-measurement-need-md-L9:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-ss-configure-authentication-enhanced-ldap-index-md-L50:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-content-ja-docs-concepts-security-multi-tenancy-md-L211:gold", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-content-ja-docs-concepts-security-multi-tenancy-md-L211:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-content-ja-docs-concepts-security-multi-tenancy-md-L211:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-content-ja-docs-concepts-security-multi-tenancy-md-L211:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s5-projects-wikictl-cli-config-L21:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-anage-contact-points-integrations-webhook-notifier-L49:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-on-cluster-port-forward-access-application-cluster-L114:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-tegy-decisions-adr-0001-subject-own-dev-process-md-L9:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-tegy-decisions-adr-0001-subject-own-dev-process-md-L9:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-tegy-decisions-adr-0001-subject-own-dev-process-md-L9:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-tegy-decisions-adr-0001-subject-own-dev-process-md-L9:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-es-ngalert-api-tooling-definitions-alertmanager-go-L249:gold", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-es-ngalert-api-tooling-definitions-alertmanager-go-L249:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-es-ngalert-api-tooling-definitions-alertmanager-go-L249:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-es-ngalert-api-tooling-definitions-alertmanager-go-L249:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s4-scheduling-eviction-dynamic-resource-allocation-md-L129:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-lizations-dashboards-create-manage-playlists-index-L81:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-s-administer-cluster-kubeadm-upgrading-linux-nodes-L73:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s5-s-administer-cluster-kubeadm-upgrading-linux-nodes-L73:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c4-s5-s-administer-cluster-kubeadm-upgrading-linux-nodes-L73:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c4-s5-s-administer-cluster-kubeadm-upgrading-linux-nodes-L73:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c1-s4-rategy-decisions-adr-0002-elimination-reasoning-md-L18:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-rategy-decisions-adr-0002-elimination-reasoning-md-L18:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-rategy-decisions-adr-0002-elimination-reasoning-md-L18:other", "correct": true, "by": "agent"}
+{"answer_id": "dev-c1-s4-rategy-decisions-adr-0002-elimination-reasoning-md-L18:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:brief", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s4-contribute-style-guides-frontend-md-L255:none", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:gold", "correct": true, "by": "agent"}
+{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:brief", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:other", "correct": false, "by": "agent"}
+{"answer_id": "dev-c2-s5-sources-datasources-postgres-troubleshooting-index-L155:none", "correct": false, "by": "agent"}
