@@ -11,17 +11,25 @@ key points to gen/phrase.py (written from the section by the local LLM) and
 to a person. S7 counts pages from the parsed YAML frontmatter. S9 links a
 term the documents write in backticks (a setting key, a rule name) to the Go
 files that hold the same string literal or struct tag (goanalyze
--parse-only), and back.
+-parse-only), and back. "Handles" is read widely there: a file that reads or
+writes the value, or changes what it does by the value, handles the term; a
+file where the name only sits in a list is not the gold (gen/judge.py
+s9check asks two judges, s9apply moves the ones they both call a list into
+the optional part of the gold).
 Output: gold-work/cand/<split>/S4.jsonl, S5.jsonl, S7-docs.jsonl, S9.jsonl
 """
 import argparse
 import collections
 import os
 import re
+import subprocess
 
 import yaml
 
-from common import CAND, OUT, read_jsonl, repo_dir, rng, split_of, write_jsonl
+from common import CAND, OUT, dropped_base_ids, is_test_path, read_jsonl, repo_dir, rng, split_of, write_jsonl
+
+# What "handles" means for S9, in the question and in the judge's prompt.
+S9_HANDLE_JA = "その値を読み書きするか、その値によって処理を変えるファイル（名前が一覧に並ぶだけのファイルは含めない）"
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 HEAD = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
@@ -143,14 +151,16 @@ def s5(split, corpus, n):
     pool = [s for s in pool if split_of(f"{corpus}:S5:{s['file']}:{s['heading']}") == split]
     r = rng(split, "S5", corpus)
     r.shuffle(pool)
-    out, files = [], set()
+    out, files, dropped = [], set(), dropped_base_ids()
     for s in pool:
         if len(out) == n:
             break
         if s["file"] in files:
             continue  # one section per page
-        files.add(s["file"])
         key = re.sub(r"[^A-Za-z0-9]+", "-", s["file"][:-3])[-50:] + f"-L{s['line']}"
+        if f"{split}-{corpus}-s5-{key}" in dropped:
+            continue  # audited as an invalid question or wrong key points
+        files.add(s["file"])
         out.append(base_item(split, corpus, "S5", key, repo, s, {
             "qgen": {"kind": "procedure", "text": s["text"][:3500], "heading": s["heading"]},
             "answer_format": "手順の要点を箇条書きで（コマンドや設定の名前はそのまま）",
@@ -163,6 +173,18 @@ def s5(split, corpus, n):
             "source": {"method": "numbered list / shell commands in a Markdown section"},
         }))
     return out
+
+
+def comment_start(corpus, repo, path, line):
+    """The first line of the comment block that sits right above line."""
+    try:
+        lines = open(os.path.join(repo_dir(corpus, repo), path), errors="replace").read().split("\n")
+    except OSError:
+        return line
+    i = line - 1
+    while i - 1 >= 0 and lines[i - 1].lstrip().startswith("//"):
+        i -= 1
+    return i + 1
 
 
 # ---------------------------------------------------------------- S4
@@ -201,7 +223,12 @@ def s4(split, corpus, n):
             seen.add((d["file"], d["line"]))
             if re.search(r"(?i)\b(because|the reason|so that|in order to|we (do|use|chose|need))\b", d["doc"]) \
                     and len(d["doc"]) >= 150 and not re.search(r"/(testing|test|tests|fakes?|mocks?)/", d["file"]):
-                s = {"file": d["file"], "heading": d["id"], "line": d["line"], "end": d["end"], "text": d["doc"]}
+                # the reason is in the doc comment above the definition, so
+                # the range of the evidence starts at the first line of that
+                # comment block, not at the definition (PE2b review: golds
+                # whose range left the reason out)
+                start = comment_start(corpus, "grafana", d["file"], d["line"])
+                s = {"file": d["file"], "heading": d["id"], "line": start, "end": d["end"], "text": d["doc"]}
                 pool.append(("grafana", s, "code"))
     elif corpus == "c4":
         for f in md_files("c4", "website", ["content/ja/docs"]):
@@ -212,7 +239,7 @@ def s4(split, corpus, n):
                     pool.append(("website", s, None))
     pool = [p for p in pool if split_of(f"{corpus}:S4:{p[1]['file']}:{p[1]['heading']}") == split]
     r.shuffle(pool)
-    out, files = [], set()
+    out, files, dropped = [], set(), dropped_base_ids()
     want_code = 3 if corpus == "c2" else 0
     for repo, s, kind in pool:
         if len(out) == n:
@@ -224,8 +251,10 @@ def s4(split, corpus, n):
             continue
         if corpus == "c2" and kind is None and len(out) - ncode >= n - want_code:
             continue
-        files.add(s["file"])
         key = re.sub(r"[^A-Za-z0-9]+", "-", s["file"])[-50:] + f"-L{s['line']}"
+        if f"{split}-{corpus}-s4-{key}" in dropped:
+            continue  # audited as an invalid question or key points that are not a reason
+        files.add(s["file"])
         out.append(base_item(split, corpus, "S4", key, repo, s, {
             "qgen": {"kind": "reason", "text": s["text"][:3500], "heading": s["heading"], "where": kind or "doc"},
             "answer_format": "理由を 1〜3 文で",
@@ -293,8 +322,15 @@ def s7_docs(split, corpus, n):
                 fams.append(("glossary", {"tag": t, "dir": gdir}, sorted(ids)))
     fams = [f for f in fams if split_of(f"{corpus}:S7d:{f[0]}:{sorted(f[1].items())}") == split]
     r.shuffle(fams)
-    out = []
-    for kind, p, items in fams[:n]:
+    out, dropped = [], dropped_base_ids()
+    for kind, p, items in fams:
+        if len(out) == n:
+            break
+        # the directory tells apart two counts of the same type in different places
+        key = re.sub(r"[^A-Za-z0-9]+", "-", "-".join(str(v) for k, v in sorted(p.items())
+                                                     if k != "dir" or kind.startswith("count")))[-60:].strip("-")
+        if f"{split}-{corpus}-s7-{kind}-{key}" in dropped:
+            continue
         if kind == "count-type":
             q = f"wiki の `{p['dir']}/` 直下のページのうち、frontmatter の `type` が `{p['type']}` のものはいくつあるか。"
             gold, fmt = {"type": "int", "value": len(items)}, "整数"
@@ -318,9 +354,6 @@ def s7_docs(split, corpus, n):
             gold, fmt = {"type": "set", "match": "name", "value": items}, "用語の id（ファイル名から .md を除いたもの）の一覧"
             ev, ids = [f"website/{p['dir']}/"], [p["tag"]]
             ptask = "Kubernetes の用語集で、ある分類に属する用語をすべて挙げさせる質問"
-        # the directory tells apart two counts of the same type in different places
-        key = re.sub(r"[^A-Za-z0-9]+", "-", "-".join(str(v) for k, v in sorted(p.items())
-                                                    if k != "dir" or kind.startswith("count")))[-60:].strip("-")
         out.append({
             "base_id": f"{split}-{corpus}-s7-{kind}-{key}", "corpus": corpus, "scenario": "S7", "split": split,
             "family": kind, "q_ident": q, "identifiers": ids,
@@ -338,9 +371,68 @@ def s7_docs(split, corpus, n):
 def lits(corpus):
     by = collections.defaultdict(set)
     for r in read_jsonl(os.path.join(OUT, f"{corpus}-go-parse.jsonl")):
-        if r["rec"] == "lit" and not r["file"].endswith("_test.go") and "/testdata/" not in r["file"]:
+        if r["rec"] == "lit" and not is_test_path(r["file"]):
             by[r["value"]].add(r["file"])
     return by
+
+
+ASSIGN = re.compile(r"^\s*(?:(\w+)\.)?([A-Za-z_]\w*)\s*(?:,\s*\w+\s*)?:?=\s*(.*)$")
+
+
+def cfg_fields(corpus, repo, files, term, window=30):
+    """The struct fields a setting's value ends up in, read from the lines
+    that hold the key in the files that read the configuration. A value may
+    pass through one or two local variables first (`cdnURL` -> `parsedCDNURL`
+    -> `cfg.CDNRootURL`), so the locals are followed inside a window."""
+    fields = set()
+    for f in files:
+        try:
+            lines = open(os.path.join(repo_dir(corpus, repo), f), errors="replace").read().split("\n")
+        except OSError:
+            continue
+        for i, line in enumerate(lines):
+            if f'"{term}"' not in line:
+                continue
+            m = ASSIGN.match(line)
+            if not m:
+                continue
+            recv, name, _ = m.groups()
+            if recv and name[:1].isupper():
+                fields.add(name)
+                continue
+            locals_ = {name}
+            for j in range(i + 1, min(i + window, len(lines))):
+                m2 = ASSIGN.match(lines[j])
+                if not m2:
+                    continue
+                r2, n2, rhs = m2.groups()
+                if not any(re.search(rf"\b{re.escape(x)}\b", rhs) for x in locals_):
+                    continue
+                if r2 and n2[:1].isupper():
+                    fields.add(n2)
+                elif not r2:
+                    locals_.add(n2)
+    return {f for f in fields if len(f) >= 8}
+
+
+def value_users(corpus, repo, fields, exclude):
+    """The files that read one of those fields: the code whose behaviour the
+    value changes, which the question asks for as well as the file that reads
+    the key (the decision of 2026-09-20)."""
+    out = set()
+    for fld in sorted(fields):
+        got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-lE", rf"\.{fld}\b", "--", "*.go"],
+                             capture_output=True, text=True).stdout.split()
+        out |= {p for p in got if not is_test_path(p)}
+    return sorted(out - set(exclude))
+
+
+def mentions(corpus, repo, term, exclude, ext=("*.go", "*.ini", "*.md", "*.ts", "*.tsx")):
+    """Files that write the term but do not handle it: naming one is neither
+    required nor wrong (gold "optional")."""
+    got = subprocess.run(["git", "-C", repo_dir(corpus, repo), "grep", "-lF", term, "--", *ext],
+                         capture_output=True, text=True).stdout.split()
+    return sorted({p for p in got if not is_test_path(p)} - set(exclude))
 
 
 def s9(split, corpus, n):
@@ -350,13 +442,13 @@ def s9(split, corpus, n):
     if corpus == "c1":
         repo, code_repo = "wiki", "wikictl"
         files = md_files("c1", "wiki", ["projects/wikictl"])
-        mentions = collections.defaultdict(list)
+        by_term = collections.defaultdict(list)
         for f in files:
             _, secs = sections("c1", "wiki", f)
             for s in secs:
                 for t in set(re.findall(r"`([a-z][a-z0-9_.]{3,40})`", s["text"])):
-                    mentions[t].append(s)
-        for t, secs in mentions.items():
+                    by_term[t].append(s)
+        for t, secs in by_term.items():
             code = sorted(by.get(t, ()))
             if 1 <= len(code) <= 3 and ("_" in t or "." in t):
                 pool.append((t, secs, code))
@@ -383,22 +475,38 @@ def s9(split, corpus, n):
                     pool.append((t, pages, code))
     pool = [p for p in pool if split_of(f"{corpus}:S9:{p[0]}") == split]
     r.shuffle(pool)
-    out = []
-    for i, (t, secs, code) in enumerate(pool[:n]):
+    out, dropped = [], dropped_base_ids()
+    for t, secs, code in pool:
+        if len(out) == n:
+            break
         s = secs[0]
-        direction = "doc2code" if i % 2 == 0 else "code2doc"
+        direction = "doc2code" if len(out) % 2 == 0 else "code2doc"
         key = re.sub(r"[^A-Za-z0-9]+", "-", t) + "-" + direction
+        if f"{split}-{corpus}-s9-{key}" in dropped:
+            continue
         pages = sorted({x["file"] for x in secs})
         if direction == "doc2code":
+            # the files that read the key, plus the files whose behaviour the
+            # value changes (they hold the field, not the string), which the
+            # review of PE2b found missing from the gold
+            fields = cfg_fields(corpus, code_repo, code, t)
+            users = value_users(corpus, code_repo, fields, code) if fields else []
+            if corpus == "c2" and (not fields or len(users) > 4):
+                continue  # the value cannot be followed to its users: not askable
+            want = sorted(set(code) | set(users))
             where = f"wiki の `{s['file']}`" if corpus == "c1" else f"Grafana の設定の文書（`{s['file']}`）の `[{s.get('parent', '')}]` の節"
-            q = f"{where} で説明されている `{t}` を、{code_repo} のソースコードのどのファイルが扱っているか。"
-            gold = {"type": "files", "repo": code_repo, "value": code}
-            ev = [f"{code_repo}/{c}" for c in code]
+            q = (f"{where} で説明されている `{t}` を、{code_repo} のソースコードのどのファイルが扱っているか"
+                 f"（{S9_HANDLE_JA}）。")
+            gold = {"type": "files", "repo": code_repo, "value": want,
+                    "optional": mentions(corpus, code_repo, t, want)}
+            ev = [f"{code_repo}/{c}" for c in want]
             fmt = f"{code_repo} リポジトリの根からのファイルのパスの一覧"
-            ptask = "文書で説明されている次の設定・項目を、ソースコードのどのファイルが扱っているかを尋ねる質問"
+            ptask = "文書で説明されている次の設定・項目を、ソースコードのどのファイルが扱っている（値を読み書きする、値で処理を変える）かを尋ねる質問"
         else:
-            q = f"{code_repo} のソースコード（`{code[0]}`）で扱っている `{t}` について説明している文書のページはどれか。"
-            gold = {"type": "files", "repo": repo, "value": pages, "match": "any"}
+            q = (f"{code_repo} のソースコード（`{code[0]}`）が扱っている `{t}` について、"
+                 f"その内容を説明している文書のページはどれか（名前が一覧に並ぶだけのページは含めない）。")
+            gold = {"type": "files", "repo": repo, "value": pages, "match": "any",
+                    "optional": mentions(corpus, repo, t, pages, ext=("*.md",))}
             ev = [f"{repo}/{p}" for p in pages]
             fmt = f"{repo} の根からの文書のページのパスの一覧"
             ptask = "ソースコードで扱っている次の設定・項目について説明している文書のページを尋ねる質問"
@@ -408,8 +516,9 @@ def s9(split, corpus, n):
             "paraphrase_task": ptask, "answer_format": fmt, "gold": gold,
             "review": {"required": True,
                        "check": "文書の記述とコードの対応が正しいか（同じ文字列でも別の意味で使っていないか）。"
-                                "正解のファイルの過不足（文字列を持つファイルでなく、処理を実装するファイルを足す）"},
-            "source": {"method": "backticked term in a document == Go string literal / struct tag (go/parser)",
+                                f"正解のファイルが「{S9_HANDLE_JA}」に当たるか（当たらないものは gold.optional へ）"},
+            "source": {"method": "backticked term in a document == Go string literal / struct tag (go/parser); "
+                                 "for doc2code also the files that read the struct field the value is kept in",
                        "code_files": code, "doc_sections": [(x["file"], x["line"]) for x in secs][:10]},
         })
         item["evidence_accept"] = ev

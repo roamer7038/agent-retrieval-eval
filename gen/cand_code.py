@@ -19,7 +19,8 @@ import os
 import re
 import subprocess
 
-from common import CAND, CORPORA, OUT, read_jsonl, rng, split_of, write_jsonl
+from common import (CAND, CORPORA, OUT, TEST_EXCL_JA, dropped_base_ids, is_test_path, read_jsonl, rng, split_of,
+                    write_jsonl)
 
 N = {"S1": {"c1": 8, "c2": 10, "c3": 8}, "S3": {"c1": 8, "c2": 8, "c3": 8}, "S7": {"c1": 3, "c2": 5, "c3": 5}}
 REPO = {"c1": "wikictl", "c2": "grafana", "c3": "linux"}
@@ -61,7 +62,10 @@ class Go:
                 continue
             key = f"{p['recv']}.{p['name']}" if p.get("recv") else p["name"]
             self.universe[key] += 1
-        self.def_by = {(d["pkg"], d["id"]): d for d in self.defs if not d["test"]}
+        # a caller is looked up here, so a file written for tests (a fake, a
+        # mock, a helper) is not a caller: the question says it leaves those
+        # out (common.TEST_PATH)
+        self.def_by = {(d["pkg"], d["id"]): d for d in self.defs if not d["test"] and not is_test_path(d["file"])}
 
     def pkgdir(self, d):
         return os.path.dirname(d["file"])
@@ -71,7 +75,7 @@ class Go:
         for d in self.defs:
             if d["test"] or d["generated"] or d["kind"] not in ("func", "method", "struct", "interface", "type"):
                 continue
-            if len(d["doc"]) < 40 or d.get("alias"):
+            if len(d["doc"]) < 40 or d.get("alias") or is_test_path(d["file"]):
                 continue
             if self.corpus == "c2" and not d["file"].startswith("pkg/"):
                 continue
@@ -152,7 +156,7 @@ class CIndex:
         out = []
         for d in self.defs:
             f = d["file"]
-            if not f.endswith(".c") or f.startswith(("arch/", "tools/", "scripts/", "samples/")):
+            if not f.endswith(".c") or f.startswith(("arch/", "tools/", "scripts/", "samples/")) or is_test_path(f):
                 continue
             if d["static"] or len(d["doc"]) < 40 or self.names[d["name"]] != 1 or not self.literal(d):
                 continue
@@ -173,8 +177,8 @@ class CIndex:
         for c in self.calls_to.get(d["name"], []):
             if not self.same_callee(c, d):
                 continue
-            if c["caller"] == d["name"]:
-                continue
+            if c["caller"] == d["name"] or is_test_path(c["caller_file"]):
+                continue  # a caller written for a test (kunit, selftests) is left out
             res[(c["caller_file"], c["caller"])] = {"file": c["caller_file"], "id": c["caller"]}
         return res
 
@@ -260,8 +264,12 @@ def s1_go(corpus, split, n):
     pool = [d for d in g.s1_pool() if split_of(f"{corpus}:S1:{d['file']}:{d['id']}") == split]
     r = rng(split, "S1", corpus)
     r.shuffle(pool)
-    out = []
-    for d in pool[:n]:
+    out, dropped = [], dropped_base_ids()
+    for d in pool:
+        if len(out) == n:
+            break
+        if f"{split}-{corpus}-s1-go-{d['id'].replace('.', '-')}" in dropped:
+            continue
         siblings = [x for x in g.s1_pool() if x["pkg"] == d["pkg"] and x["id"] != d["id"]]
         if len(siblings) < 4:
             siblings += [x for x in g.s1_pool() if x["file"].split("/")[:2] == d["file"].split("/")[:2]
@@ -280,12 +288,16 @@ def s1_ts(split, n):
     pool = [d for d in defs if not d["test"] and d["exported"] and len(d["doc"]) >= 40 and names[d["name"]] == 1
             and gonames[d["name"]] == 0 and d["kind"] != "const"
             and (d["file"].startswith("public/app/") or d["file"].startswith("packages/"))
-            and not re.search(r"/(mocks?|test|tests|fixtures|testdata|__fixtures__|stories)/|\.story\.tsx?$|mock", d["file"])]
+            and not is_test_path(d["file"]) and not re.search(r"/stories/|\.story\.tsx?$|mock", d["file"])]
     pool = [d for d in pool if split_of(f"c2:S1:{d['file']}:{d['name']}") == split]
     r = rng(split, "S1", "c2", "ts")
     r.shuffle(pool)
-    out = []
-    for d in pool[:n]:
+    out, dropped = [], dropped_base_ids()
+    for d in pool:
+        if len(out) == n:
+            break
+        if f"{split}-c2-s1-ts-{d['name'].replace('.', '-')}" in dropped:
+            continue
         d = dict(d, id=d["name"])
         sib = [dict(x, id=x["name"]) for x in defs if os.path.dirname(x["file"]) == os.path.dirname(d["file"])
                and x["name"] != d["name"] and x["doc"]]
@@ -299,10 +311,12 @@ def s1_c(split, n):
     pool = [d for d in c.s1_pool() if split_of(f"c3:S1:{d['file']}:{d['name']}") == split]
     r = rng(split, "S1", "c3")
     r.shuffle(pool)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for d in pool:
         if len(out) == n:
             break
+        if f"{split}-c3-s1-c-{d['name'].replace('.', '-')}" in dropped:
+            continue
         other = [x for x in c_defined_elsewhere(d["name"]) if x[0] != d["file"]]
         if other:
             continue
@@ -360,12 +374,14 @@ def s3_go(corpus, split, n):
             continue
         cands.append(d)
     r.shuffle(cands)
-    out = []
+    out, dropped = [], dropped_base_ids()
     depth_plan = [1, 2] * n
     for d in cands:
         if len(out) == n:
             break
         depth = depth_plan[len(out)]
+        if f"{split}-{corpus}-s3-go-{d['id'].replace('.', '-')}-d{depth}" in dropped:
+            continue
         l1 = g.direct_callers(d["pkg"], d["id"])
         if not 2 <= len(l1) <= 8:
             continue
@@ -394,10 +410,10 @@ def s3_c(split, n):
     c = C()
     r = rng(split, "S3", "c3")
     cands = [d for d in c.defs if d["file"].endswith(".c") and not d["file"].startswith(("arch/", "tools/"))
-             and len(d["doc"]) >= 30 and c.names[d["name"]] == 1
+             and not is_test_path(d["file"]) and len(d["doc"]) >= 30 and c.names[d["name"]] == 1
              and split_of(f"c3:S3:{d['file']}:{d['name']}") == split]
     r.shuffle(cands)
-    out = []
+    out, dropped = [], dropped_base_ids()
     # static functions only: every caller is in the same file, which is in
     # the build; a function with external linkage may also be called from
     # files the x86_64 defconfig does not build, which the AST cannot see
@@ -406,6 +422,8 @@ def s3_c(split, n):
         if len(out) == n:
             break
         want_static, depth = plan[len(out)]
+        if f"{split}-c3-s3-c-{d['name']}-d{depth}" in dropped:
+            continue  # audited as wrong or invalid: draw another candidate
         if d["static"] != want_static or not c.literal(d):
             continue
         l1 = c.direct_callers(d)
@@ -430,7 +448,8 @@ def s3_c(split, n):
             if len(gold) > 12 or len(gold) == len(l1):
                 continue
         refs = c.indirect(d)
-        optional = {(r["context_file"], r["context"]): r for r in refs if r["context_kind"] == "func"}
+        optional = {(r["context_file"], r["context"]): r for r in refs
+                    if r["context_kind"] == "func" and not is_test_path(r["context_file"])}
         d = dict(d, id=d["name"])
         out.append(s3_item("c3", split, "c", d, d["name"], "func", depth, gold, refs, [],
                            scope="", optional={k: v for k, v in optional.items() if k not in gold}))
@@ -448,9 +467,9 @@ def s3_item(corpus, split, lang, d, ident, kind, depth, gold, refs, cha, scope="
         rel = "直接呼び出している"
     else:
         rel = "直接呼び出している関数と、それらを直接呼び出している関数（2 段まで）の"
-    # Go: helpers for tests outside _test.go files (fakes, mocks) are code
-    # like any other, so the question names the files it leaves out
-    excl = "`_test.go` のファイルを除く" if lang == "go" else "テストを除く"
+    # the gold leaves out the files written for tests and the stand-ins they
+    # use (common.TEST_PATH), so the question says which files those are
+    excl = TEST_EXCL_JA
     q = (f"{repo} のソースコード（{excl}）で、{scope}{what} を{rel}関数をすべて挙げよ。" if depth == 1 else
          f"{repo} のソースコード（{excl}）で、{scope}{what} を{rel}すべてを挙げよ。")
     items = sorted({(f, i) for (f, i) in gold})
@@ -484,7 +503,9 @@ def s7_go(corpus, split, n):
     # 1. types that implement an interface of the corpus
     by_iface = collections.defaultdict(list)
     for im in g.impls:
-        if im["file"].endswith("_test.go") or (corpus == "c2" and not im["file"].startswith("pkg/")):
+        # a fake or a mock implements the interface too; the question says it
+        # leaves those out, so the gold does the same (common.TEST_PATH)
+        if is_test_path(im["file"]) or (corpus == "c2" and not im["file"].startswith("pkg/")):
             continue
         by_iface[(im["iface_pkg"], im["iface"])].append(im)
     idefs = {(d["pkg"], d["id"]): d for d in g.defs if d["kind"] == "interface" and not d["test"]}
@@ -496,9 +517,10 @@ def s7_go(corpus, split, n):
     # 2. methods of a type
     by_recv = collections.defaultdict(list)
     for d in g.defs:
-        if d["kind"] == "method" and not d["test"] and not d["generated"]:
+        if d["kind"] == "method" and not d["test"] and not d["generated"] and not is_test_path(d["file"]):
             by_recv[(d["pkg"], d["recv"])].append(d)
-    tdefs = {(d["pkg"], d["id"]): d for d in g.defs if d["kind"] in ("struct", "type") and not d["test"]}
+    tdefs = {(d["pkg"], d["id"]): d for d in g.defs
+             if d["kind"] in ("struct", "type") and not d["test"] and not is_test_path(d["file"])}
     for key, ms in by_recv.items():
         d = tdefs.get(key)
         if not d or not 4 <= len(ms) <= 20 or g.universe[d["id"]] != 1:
@@ -508,17 +530,21 @@ def s7_go(corpus, split, n):
         fams.append(("methods", d, sorted({m["name"] for m in ms})))
     fams = [f for f in fams if split_of(f"{corpus}:S7:{f[0]}:{f[1]['file']}:{f[1]['id']}") == split]
     r.shuffle(fams)
-    out = []
-    for kind, d, items in fams[:n]:
+    out, dropped = [], dropped_base_ids()
+    for kind, d, items in fams:
+        if len(out) == n:
+            break
+        if f"{split}-{corpus}-s7-go-{kind}-{d['id']}" in dropped:
+            continue
         if kind == "impl":
-            q = (f"{repo} のソースコード（`_test.go` のファイルを除く{'、pkg/ 以下' if corpus == 'c2' else ''}）で、インタフェース `{d['id']}`"
+            q = (f"{repo} のソースコード（{TEST_EXCL_JA}{'。pkg/ 以下' if corpus == 'c2' else ''}）で、インタフェース `{d['id']}`"
                  f"（{d['file']}）を満たす名前付きの型をすべて挙げよ。")
             fmt = "型の一覧。各要素は `ファイルのパス:型名`（パスはリポジトリの根から）"
             gold = {"type": "set", "match": "func", "repo": repo, "value": items}
             ptask = "次のインタフェースを満たす型をすべて挙げさせる質問"
             ev = sorted({f"{repo}/{x.split(':')[0]}" for x in items})
         else:
-            q = f"{repo} のソースコードで、型 `{d['id']}` に定義されているメソッドをすべて挙げよ。"
+            q = f"{repo} のソースコード（{TEST_EXCL_JA}）で、型 `{d['id']}` に定義されているメソッドをすべて挙げよ。"
             fmt = "メソッド名の一覧"
             gold = {"type": "set", "match": "name", "value": items}
             ptask = "次の型に定義されているメソッドをすべて挙げさせる質問"
@@ -548,7 +574,7 @@ def s7_c(split, n):
     root = os.path.join(CORPORA, "c3/linux")
     by = collections.defaultdict(list)
     for v in c.vars:
-        if not v.get("definition") or not v["file"].endswith(".c"):
+        if not v.get("definition") or not v["file"].endswith(".c") or is_test_path(v["file"]):
             continue
         m = re.match(r"^(?:const )?(struct \w+)$", v["type"])
         if not m or not c.literal(dict(v, name=v["name"]), call=False):
@@ -563,12 +589,16 @@ def s7_c(split, n):
         fams.append(("vars", dr, ty, sorted({f"{v['file']}:{v['name']}" for v in vs})))
     fams = [f for f in fams if split_of(f"c3:S7:{f[1]}:{f[2]}") == split]
     r.shuffle(fams)
-    out = []
-    for _, dr, ty, items in fams[:n]:
+    out, dropped = [], dropped_base_ids()
+    for _, dr, ty, items in fams:
+        if len(out) == n:
+            break
+        if f"{split}-c3-s7-c-{dr.replace('/', '-')}-{ty.split()[1]}" in dropped:
+            continue
         out.append({
             "base_id": f"{split}-c3-s7-c-{dr.replace('/', '-')}-{ty.split()[1]}",
             "corpus": "c3", "scenario": "S7", "split": split, "code_lang": "c", "family": "vars",
-            "q_ident": f"linux のソースコードの `{dr}/` 直下の .c ファイルで、`{ty}` 型のファイルスコープの変数として定義されているものをすべて挙げよ。",
+            "q_ident": f"linux のソースコードの `{dr}/` 直下の .c ファイル（{TEST_EXCL_JA}）で、`{ty}` 型のファイルスコープの変数として定義されているものをすべて挙げよ。",
             "identifiers": [ty.split()[1], dr],
             "subject": {"label": f"{dr}: {ty}", "kind": "struct-vars", "doc": "", "area": dr},
             "paraphrase_task": "linux のソースコードの、あるディレクトリで、ある構造体の型の変数をすべて挙げさせる質問",
