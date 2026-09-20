@@ -4,6 +4,10 @@
     harness/run.py run --question pe0-s1 --cond A1 --model local:qwen3.8:27b [--rep 1] [--label pe0]
     harness/run.py batch --questions pe0-s1,pe0-s5 --conds A1 --models local:qwen3.8:27b [--reps 1] [--label pe0]
     harness/run.py prompt --question pe0-s1 --cond A1
+    harness/run.py plan                       条件 × 題材の当てはまりと、外した理由
+    harness/run.py smoke --question <id> --cond A2 -- <cmd...>
+                                              その条件の環境で Claude Code の代わりに
+                                              <cmd> を動かす（道具と索引の確認）
 
 A session is one question under one condition, model and repetition, written
 to $ARE_RUNS (default ../agent-retrieval-eval-runs)/<label>/<question>-<cond>-<model>-r<rep>/:
