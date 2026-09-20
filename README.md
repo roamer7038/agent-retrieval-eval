@@ -25,7 +25,7 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
 | `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`） |
 | `harness/run.py` の `CONDS`・`TOOLS` | L2 の条件（A0〜A7）と、条件ごとの道具・渡し方・索引 |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体、`pe4-l2.md` はエージェント経由） |
 
 ## 使い方
 
