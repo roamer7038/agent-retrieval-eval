@@ -688,7 +688,15 @@ def s9(split, corpus, n):
 # 2026-09-20): its candidates are thrown away by the audit and by the check on
 # the paraphrase more often than the rest, and the number of bases is what
 # suffers. Drawing deeper is the same answer that worked for S8 in PE2b.
-N = {"S4": {"c1": 24, "c2": 18, "c4": 18}, "S5": {"c1": 6, "c2": 6, "c4": 8}, "S7": {"c1": 4, "c4": 5},
+# c4 and c2 draw deeper still (PE2d): 18 candidates gave 6 bases for c4 where
+# 8 are wanted, and the check on the key points, which drops about one in five
+# candidates, costs c2 two of the eight it had. The draw is a prefix of one
+# shuffled pool, so raising the number leaves the candidates already drawn
+# where they are and only adds more after them. c1 keeps its number although
+# its pool holds three sections in dev: there is nothing deeper to draw there
+# (results/pe2c.md, 2.3). The pools of the test split are larger, because no
+# audit has taken sections out of them yet (results/pe2d.md).
+N = {"S4": {"c1": 24, "c2": 26, "c4": 30}, "S5": {"c1": 6, "c2": 6, "c4": 8}, "S7": {"c1": 4, "c4": 5},
      "S9": {"c1": 8, "c2": 8}}
 
 
