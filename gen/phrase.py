@@ -12,7 +12,10 @@ Stages, run model by model so the server does not switch models per item
                              section (the only step that sees corpus text)
   2. para      (GEN_MODEL)   the paraphrase, from the question, the list of
                              identifiers to avoid and a short description of
-                             the subject (a doc comment, a page title); no files
+                             the subject (a doc comment, a page title); no files.
+                             A paraphrase that names an identifier, or (S4)
+                             that repeats the words of the key points, is
+                             rejected here without asking a model
   3. judge     (CHECK_MODEL) multiple choice: which of the subject and its
                              neighbours (other functions of the package, other
                              sections of the page, ...) does the paraphrase ask
@@ -169,6 +172,46 @@ NONEXIST = re.compile(r"架空|存在しない|実在しない|仮想の名前|h
 
 PRODUCT_NAMES = {"wikictl", "grafana", "kubernetes", "linux", "wiki", "git", "go"}
 
+# How much of a key point a paraphrase may repeat. The audit of PE2b found
+# paraphrases of S4 that write the reason into the question ("... しないため、
+# なぜ ... なのか"), which the LLM check on uniqueness does not catch: such a
+# question does point at one section, it only carries its own answer. The
+# share below is set from the 13 phrased S4 candidates of PE2b, where the ones
+# the audit passed reached 0.15 and the ones it threw away for this reason
+# 0.28, 0.29 and 0.65 (results/pe2c.md).
+# S5 is left out on purpose: its bases are audited as they are, and a question
+# that asks how to do something names the goal without giving the steps.
+POINT_LEAK_MAX = {"S4": 0.25}
+JA = r"぀-ヿ一-鿿々"
+
+
+def words(s):
+    """The words of a Japanese sentence, cheaply: latin words as they are and
+    character bigrams over the runs of kana and kanji. No dictionary, so what
+    this measures is shared surface, not shared meaning."""
+    s = re.sub(r"[`\"'()（）「」、。，．,.:：;；!！?？\[\]【】<>＜＞/\\|｜~〜\-—ー…]+", " ", (s or "").lower())
+    out = set(re.findall(r"[a-z0-9_]{3,}", s))
+    for run in re.findall(rf"[{JA}]+", s):
+        out |= {run[i:i + 2] for i in range(len(run) - 1)}
+    return out
+
+
+def point_leak(c, text):
+    """How much of the answer a paraphrase gives away: the largest share of
+    one key point's words that it repeats, counting only the words the
+    question with identifiers does not already use (those name the subject,
+    not the answer). Returns the share and the key point it came from."""
+    qi = words(c.get("q_ident"))
+    best, which = 0.0, ""
+    for p in (c.get("gold") or {}).get("points") or []:
+        tp = words(p) - qi
+        if len(tp) < 4:
+            continue   # too short for the share to mean anything
+        share = len(tp & words(text)) / len(tp)
+        if share > best:
+            best, which = share, p
+    return best, which
+
 
 def leaks(c, text):
     t = text.lower()
@@ -207,6 +250,12 @@ def stage_para(c, feedback=""):
     q = (j or {}).get("question", "").strip()
     c.setdefault("attempts", []).append({"paraphrase": q})
     lk = leaks(c, q) if q else ["(empty)"]
+    if q and c["scenario"] in POINT_LEAK_MAX:
+        share, point = point_leak(c, q)
+        c["attempts"][-1]["point_leak"] = round(share, 3)
+        if share > POINT_LEAK_MAX[c["scenario"]]:
+            lk = lk + [f"(答え（要点）の語をそのまま含んでいる: 「{point}」。"
+                       f"何がそうなっているかだけを書き、その理由を質問に書かない)"]
     if lk:
         c["attempts"][-1]["leak"] = lk
         c["q_para"] = None
@@ -480,6 +529,9 @@ def main():
             stats[k]["first_round_leak"] += rounds[0] == "leak"
         if c.get("en_check"):
             stats[k]["translation_ok"] += bool(c["en_check"].get("ok"))
+        if any(any(str(x).startswith("(答え") for x in (at.get("leak") or []))
+               for at in c.get("attempts") or []):
+            stats[k]["point_leak_rejected"] += 1
     json.dump({"stats": {k: dict(v) for k, v in stats.items()}, "llm": llm.stats,
                "models": {"gen": llm.GEN_MODEL, "check": llm.CHECK_MODEL}},
               open(os.path.join(PHRASED, a.split, "stats.json"), "w"), ensure_ascii=False, indent=1)

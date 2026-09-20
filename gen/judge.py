@@ -6,7 +6,7 @@ procedures), and the answers it was tried on.
     gen/judge.py judge [--split dev]              # two judges' verdicts
     gen/judge.py agree <human.jsonl>              # agreement with a person's labels
     gen/judge.py s9check [--split dev]            # S9: does each gold file handle the term
-    gen/judge.py s9apply [--split dev]            # S9: keep the files both judges call handled
+    gen/judge.py s9apply [--split dev]            # S9: keep the files the judge calls handled
     gen/judge.py s9agree <human.jsonl>            # agreement of s9check with a person
 
 The answers are made to vary in quality: one written from the gold section,
@@ -23,13 +23,14 @@ raw agreement and Cohen's kappa of each judge, of the two judges with each
 other, and of their agreed verdicts.
 S9 answers are lists of files and are graded without a judge; what needs a
 judgement there is the gold: a file that holds the term only in a list of
-names is not the file that handles it. s9check shows both judges
-the document's section and the lines around the term in each gold file, and
-asks whether the file handles (or, for a page, explains) the term; "handles"
-is read widely (the value is read, written, or decides what the code does).
-s9apply then keeps in the gold the files both judges call handled and moves
-the rest to "optional", so that neither a file that only lists the name is
-required nor one that the judges split on.
+names is not the file that handles it. s9check shows the judge (one here,
+S9_JUDGES) the document's section and the lines that tie the file to the term,
+and asks whether the file handles (or, for a page, explains) the term;
+"handles" is read widely (the value is read, written, decides what the code
+does, or reaches the file through a function that returns it). s9apply then
+keeps in the gold the files the judge calls handled and moves the rest to
+"optional", so that a file which only lists the name is not required. The
+agent settles the ones it disagrees with in results/pe2-s9-decisions.jsonl.
 Files: gold-work/judge/<split>/answers.jsonl, verdicts.jsonl, s9check.jsonl
 """
 import argparse
@@ -45,6 +46,11 @@ ANSWER_MODEL = "ornith-1.5:35b"
 JUDGE_MODEL = llm.CHECK_MODEL
 # two judges of different lineage; the answers are written by a third model
 JUDGES = [("A", llm.CHECK_MODEL), ("B", llm.CHECK_MODEL_2)]
+# The gold of S9 is picked by one judge and the agent's decision. The second
+# judge was measured on this task in PE2b and could not do it (agreement
+# 0.793, kappa about 0), while it was the better of the two on the free-text
+# answers, so it stays there and is left out here (the decision of 2026-09-20).
+S9_JUDGES = JUDGES[:1]
 JDIR = os.path.join(WORK, "judge")
 
 ANSWER = """次の質問に、日本語で答えてください。{ctx}
@@ -166,11 +172,11 @@ S9CHECK = """文書とソースコードの対応を確認してください。
 文書の記述（{term} について）:
 {doc}
 
-次は、ファイル {file} の中で `{term}` が現れる箇所です（前後の行を含む）:
+次は、ファイル {file} の中で {look} が現れる箇所です（前後の行を含む）:
 {snippets}
 
-このファイルは `{term}` を「扱っている」と言えるかを判定してください。「扱っている」は広くとります。
-- コードのファイルなら: `{term}` の値を読み取る・設定する・既定値や許される値を定める・他へ渡す・その値によって処理を変えるなら "handles"。名前が一覧・表・コメント・テストのデータに現れるだけで、その値に応じて何かが変わる記述がどこにも無いなら "names_only"。
+このファイルは `{term}` を「扱っている」と言えるかを判定してください。「扱っている」は広くとります。`{term}` の値は、設定を読む箇所で構造体のフィールドに入り、そのフィールドを返す短い関数を通して他のファイルへ渡ることがあります。そのため、ファイルが `{term}` という文字列そのものを書いていなくても、その値を受け取って使っていれば「扱っている」に当たります（上の抜粋は、そのフィールドや関数が現れる箇所です）。
+- コードのファイルなら: `{term}` の値を読み取る・設定する・既定値や許される値を定める・他へ渡す・その値によって処理を変えるなら "handles"。値を返す関数の戻り値を使って処理を変えるのも "handles"。名前が一覧・表・コメント・テストのデータに現れるだけで、その値に応じて何かが変わる記述がどこにも無いなら "names_only"。
 - 文書のページなら: `{term}` が何であるか・どう使うか・どう効くかを説明していれば "handles"。一覧や例の中に名前が現れるだけなら "names_only"。
 - reason に理由を短く書く。
 JSON で答えてください。"""
@@ -179,13 +185,22 @@ S9_SCHEMA = {"type": "object", "properties": {"role": {"type": "string", "enum":
                                               "reason": {"type": "string"}}, "required": ["role", "reason"]}
 
 
-def snippets(corpus, repo, path, term, around=4, most=3):
+def snippets(corpus, repo, path, terms, around=4, most=3):
+    """The lines that tie a file to the term. A file can be in the gold
+    without writing the key: it reads the struct field the value is kept in,
+    or it calls the function that returns it. The words to look for therefore
+    come from the candidate (source.gold_terms), not from the key alone;
+    before PE2c this looked for the key only and showed the judges nothing at
+    all for the files that hold the value."""
     from common import repo_dir
+    if isinstance(terms, str):
+        terms = [terms]
+    terms = [t for t in terms if t]
     try:
         lines = open(os.path.join(repo_dir(corpus, repo), path), errors="replace").read().split("\n")
     except OSError:
         return ""
-    hits = [i for i, l in enumerate(lines) if term in l][:most]
+    hits = [i for i, l in enumerate(lines) if any(t in l for t in terms)][:most]
     out = []
     for i in hits:
         a, b = max(0, i - around), min(len(lines), i + around + 1)
@@ -199,11 +214,14 @@ def s9check(split):
     out, splits = [], 0
     for c in rows:
         term, g = c["subject"]["label"], c["gold"]
+        gterms = (c.get("source") or {}).get("gold_terms") or {}
         for f in g["value"]:   # only the files the gold requires
-            snip = snippets(c["corpus"], g["repo"], f, term)
-            prompt = S9CHECK.format(term=term, doc=c["subject"]["doc"][:800], file=f, snippets=snip)
+            look = sorted(set(gterms.get(f) or [term]))
+            snip = snippets(c["corpus"], g["repo"], f, look)
+            prompt = S9CHECK.format(term=term, doc=c["subject"]["doc"][:800], file=f, snippets=snip,
+                                    look="・".join(f"`{x}`" for x in look))
             by, res = {}, {}
-            for name, model in JUDGES:
+            for name, model in S9_JUDGES:
                 j = llm.chat_json(model, prompt, schema=S9_SCHEMA)
                 by[name] = (j or {}).get("role")
                 res[name] = j
@@ -268,17 +286,18 @@ def s9agree(split, human_path):
     h = {x["item"]: x["role"] == "handles" for x in read_jsonl(human_path)}
     ids = sorted(set(rows) & set(h))
     out = {"n": len(ids)}
-    for name, _ in JUDGES:
+    for name, _ in S9_JUDGES:
         pairs = [(h[i], rows[i]["by"].get(name) == "handles") for i in ids if rows[i]["by"].get(name)]
         po, k = kappa(pairs) if pairs else (float("nan"), float("nan"))
         out[f"judge_{name}"] = {"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3),
                                 "disagreements": [i for i in ids
                                                   if rows[i]["by"].get(name) and h[i] != (rows[i]["by"][name] == "handles")]}
     both = [i for i in ids if rows[i]["by"].get("A") and rows[i]["by"].get("B")]
-    jj = [(rows[i]["by"]["A"] == "handles", rows[i]["by"]["B"] == "handles") for i in both]
-    po, k = kappa(jj) if jj else (float("nan"), float("nan"))
-    out["judge_A_vs_B"] = {"n": len(jj), "agreement": round(po, 3), "kappa": round(k, 3),
-                           "split_items": [i for i in both if rows[i]["by"]["A"] != rows[i]["by"]["B"]]}
+    if both:
+        jj = [(rows[i]["by"]["A"] == "handles", rows[i]["by"]["B"] == "handles") for i in both]
+        po, k = kappa(jj)
+        out["judge_A_vs_B"] = {"n": len(jj), "agreement": round(po, 3), "kappa": round(k, 3),
+                               "split_items": [i for i in both if rows[i]["by"]["A"] != rows[i]["by"]["B"]]}
     print(json.dumps(out, ensure_ascii=False, indent=1))
 
 
