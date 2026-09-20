@@ -27,10 +27,12 @@ PRICES = json.load(open(os.path.join(ROOT, "grade", "prices.json")))
 
 def load(scores, manifest):
     rows = [json.loads(l) for l in open(scores) if l.strip()]
-    man = {j["session"]: j for j in map(json.loads, open(manifest)) if l_ok(j)}
+    # セッションの名前は問題・条件・モデル・回だけで決まるので、ブロックをまたぐと
+    # ぶつかる（var と cacheB は同じ升目を含む）。**ラベル込みで**突き合わせる。
+    man = {(j.get("label"), j["session"]): j for j in map(json.loads, open(manifest)) if l_ok(j)}
     out = []
     for r in rows:
-        m = man.get(r["session"])
+        m = man.get((r.get("label"), r["session"]))
         if m is None:
             continue
         r = dict(r)
@@ -100,21 +102,26 @@ def components(rows, value, by_q="question", by_c="cond"):
         v = value(r)
         if v is not None:
             cells[(r[by_q], r[by_c])].append(v)
-    qs = sorted({q for q, _ in cells})
+    all_qs = sorted({q for q, _ in cells})
     cs = sorted({c for _, c in cells})
-    r_min = min((len(v) for v in cells.values()), default=0)
-    if not qs or not cs or r_min == 0:
+    if not all_qs or not cs:
         return None
-    # 釣り合わせる（各升目の先頭 r_min 件）
-    y = {k: v[:r_min] for k, v in cells.items() if len(v) >= r_min}
-    full = [(q, c) for q in qs for c in cs if (q, c) in y]
-    if len(full) < len(qs) * len(cs):
-        # 欠けた升目がある升目の行・列を落として釣り合わせる
-        qs = [q for q in qs if all((q, c) in y for c in cs)]
-        full = [(q, c) for q in qs for c in cs]
-        if not qs:
-            return None
-    Q, C, rr = len(qs), len(cs), r_min
+    # 釣り合った部分設計を選ぶ。反復 r を大きい方から試し、全ての条件で r 回
+    # 以上ある問題だけを残す。残差の自由度 Q·C·(r−1) が最大になる r を採る。
+    best = None
+    for rr in range(max(len(v) for v in cells.values()), 0, -1):
+        qs = [q for q in all_qs if all(len(cells.get((q, c), [])) >= rr for c in cs)]
+        if len(qs) < 2:
+            continue
+        df = len(qs) * len(cs) * (rr - 1)
+        if best is None or (df, len(qs)) > (best[0], len(best[1])):
+            best = (df, qs, rr)
+    if best is None:
+        return None
+    _, qs, rr = best
+    y = {(q, c): cells[(q, c)][:rr] for q in qs for c in cs}
+    full = [(q, c) for q in qs for c in cs]
+    Q, C = len(qs), len(cs)
     allv = [v for q, c in full for v in y[(q, c)]]
     gm = mean(allv)
     cell_m = {k: mean(y[k]) for k in full}

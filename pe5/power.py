@@ -147,35 +147,55 @@ def mde_ratio(n, r, var_qc, var_rep, power=0.8, alpha=ALPHA / FAMILY):
     return math.exp((lo + hi) / 2)
 
 
-def power_tost(n, r, p, tau, margin=0.05, alpha=ALPHA / FAMILY, iters=2000, seed=7):
-    """正答の同等性（±margin）の検出力。問題ごとの難しさを logit 上の正規乱数
-    （sd = tau）で表し、条件の間に真の差を置かずに、対応のある差の TOST が
-    「同等」と言える割合を数える。"""
+def draw_pi(rng, p, var_q):
+    """問題ごとの正答の確率。平均 p、分散 var_q に合わせる。二項の上限
+    p(1−p) を超える分散は「問題ごとに 0 か 1 に決まる」という形でしか作れない
+    ので、そのときは混合（確率 p で 1、そうでなければ 0）にする。"""
+    lim = p * (1 - p)
+    if var_q >= lim * 0.999:
+        return 1.0 if rng.random() < p else 0.0
+    if var_q <= 1e-9:
+        return p
+    # モーメントを合わせたベータ分布
+    k = lim / var_q - 1
+    return rng.betavariate(p * k, (1 - p) * k)
+
+
+def power_tost(n, r, p, var_q, var_qc, margin=0.05, alpha=ALPHA / FAMILY, iters=2000, seed=7):
+    """正答の同等性（±margin）の検出力。
+
+    PE5 で測った分散の成分をそのまま使う。問題ごとの正答の確率 π_q を平均 p・
+    分散 var_q で引き、条件ごとに分散 var_qc のずれを足し（真の差は 0）、
+    1 升目に r 回の二項の観測を作る。問題を単位にした対応のある差で TOST する。
+    **var_qc = 0 のときは差が恒等的に 0 になり、検出力は 1 になる**。PE5 の
+    推定はまさに 0 なので、var_qc を振った感度も見ること。"""
     rng = random.Random(seed)
-    lo = math.log(p / (1 - p))
+    sdc = math.sqrt(var_qc)
     hit = 0
     for _ in range(iters):
         ds = []
         for _ in range(n):
-            b = rng.gauss(0, tau)
-            pi = 1 / (1 + math.exp(-(lo + b)))
-            a_ = sum(1 for _ in range(r) if rng.random() < pi) / r
-            b_ = sum(1 for _ in range(r) if rng.random() < pi) / r
+            pi = draw_pi(rng, p, var_q)
+            pa = min(1.0, max(0.0, pi + (rng.gauss(0, sdc) if sdc else 0.0)))
+            pb = min(1.0, max(0.0, pi + (rng.gauss(0, sdc) if sdc else 0.0)))
+            a_ = sum(1 for _ in range(r) if rng.random() < pa) / r
+            b_ = sum(1 for _ in range(r) if rng.random() < pb) / r
             ds.append(a_ - b_)
         m = sum(ds) / n
-        s = math.sqrt(sum((d - m) ** 2 for d in ds) / (n - 1) / n) if n > 1 else 0
-        if s == 0:
+        s2 = sum((d - m) ** 2 for d in ds) / (n - 1) if n > 1 else 0.0
+        se = math.sqrt(s2 / n)
+        if se == 0:
             hit += abs(m) < margin
             continue
         tc = t_q(1 - alpha, n - 1)
-        if (m - margin) / s < -tc and (m + margin) / s > tc:
+        if (m - margin) / se < -tc and (m + margin) / se > tc:
             hit += 1
     return hit / iters
 
 
 # ---- 表 --------------------------------------------------------------------
 
-def table(est, budgets, cost_per_session, var_qc, var_rep, acc_p, acc_tau, n_max):
+def table(est, budgets, cost_per_session, var_qc, var_rep, acc_p, acc, n_max):
     print("\n## 予算ごとの問題数 × 反復数（条件 7、1 問あたり "
           f"{cost_per_session:.3f} USD と仮定、問題は最大 {n_max}）")
     print("| 予算 USD | セッション数 | 反復 r | 問題数 n | 使うセッション | "
@@ -191,13 +211,27 @@ def table(est, budgets, cost_per_session, var_qc, var_rep, acc_p, acc_tau, n_max
             m80 = mde_ratio(n, r, var_qc, var_rep, 0.8)
             m90 = mde_ratio(n, r, var_qc, var_rep, 0.9)
             p13 = power_ratio(math.log(1.3), n, r, var_qc, var_rep)
-            pe = power_tost(n, r, acc_p, acc_tau)
+            pe = power_tost(n, r, acc_p, acc["var_q"], acc["var_qc"])
             used = n * N_CONDS * r
             rows.append(dict(budget=b, sessions=n_sessions, r=r, n=n, used=used, mde80=m80,
                              mde90=m90, power13=p13, power_tost=pe))
             print(f"| {b} | {n_sessions} | {r} | {n} | {used}（{used * cost_per_session:.0f} USD） | "
                   f"{m80:.3f} | {m90:.3f} | {p13:.2f} | {pe:.2f} |")
     return rows
+
+
+def tost_sensitivity(p, var_q):
+    """正答の同等性の検出力は、条件 × 問題の交互作用（正答の側）に強く依る。
+    PE5 の推定は 0 なので、0 でない値を振って必要な問題数を見る。"""
+    print("\n## 正答の同等性（±5 ポイント）の感度")
+    print("PE5 の σ²_q×c（正答）の推定は **0**（12 問 × 3 条件 × 2 回で、"
+          "同じ問題ならどの条件でも正否が一致した）。0 だと検出力は 1 になるので、"
+          "0 でない値を仮に置いて必要な問題数を見る。")
+    print("\n| σ²_q×c（正答） | 問題ごとの差の sd | n=100 | n=230 | n=350 | n=500 |")
+    print("|--:|--:|--:|--:|--:|--:|")
+    for v in (0.0, 0.002, 0.005, 0.01, 0.02):
+        cells = [f"{power_tost(n, 1, p, var_q, v):.2f}" for n in (100, 230, 350, 500)]
+        print(f"| {v:.3f} | {math.sqrt(2 * v):.3f} | " + " | ".join(cells) + " |")
 
 
 def fixed_n_table(var_qc, var_rep):
@@ -225,20 +259,19 @@ def main():
     est = json.load(open(a.estimates))
     comp = est["components"][a.metric]
     var_qc, var_rep = comp["var_qc"], comp["var_rep"]
-    acc = est["components"].get("correct(0/1)")
-    rates = [v["rate"] for v in est["accuracy"].values() if v["rate"] is not None]
-    p = min(0.95, max(0.55, sum(rates) / len(rates))) if rates else 0.9
-    # 正答の問題ごとのばらつきを logit 上の sd に直す（δ 法の逆）。
-    tau = math.sqrt(acc["var_q"]) / max(1e-6, p * (1 - p)) if acc else 1.0
-    tau = min(tau, 4.0)
+    acc = est["components"].get("correct(0/1)") or {"var_q": 0.05, "var_qc": 0.0}
+    rates = [v["rate"] for k, v in est["accuracy"].items()
+             if v["rate"] is not None and k != "A0"]
+    p = min(0.98, max(0.55, sum(rates) / len(rates))) if rates else 0.9
     cost = a.cost or median_cost(est)
     print(f"# 検出力（{a.metric}）")
     print(f"- σ²_rep = {var_rep:.4f}、σ²_q×c = {var_qc:.4f}、σ²_q = {comp['var_q']:.4f}"
           f"（問題 {comp['n_questions']}、条件 {comp['n_conds']}、反復 {comp['reps']}）")
-    print(f"- 正答: p ≈ {p:.2f}、問題ごとの logit の sd ≈ {tau:.2f}")
+    print(f"- 正答: p ≈ {p:.2f}、σ²_q = {acc['var_q']:.4f}、σ²_q×c = {acc['var_qc']:.4f}")
     print(f"- α = 0.05/{FAMILY}（Holm の最も厳しい段）、両側。条件は {N_CONDS}")
-    table(est, [float(x) for x in a.budgets.split(",")], cost, var_qc, var_rep, p, tau, a.max_n)
+    table(est, [float(x) for x in a.budgets.split(",")], cost, var_qc, var_rep, p, acc, a.max_n)
     fixed_n_table(var_qc, var_rep)
+    tost_sensitivity(p, acc["var_q"])
 
 
 def median_cost(est):

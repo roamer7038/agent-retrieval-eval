@@ -22,7 +22,8 @@ import run as R  # noqa: E402
 CLIENT = r'''
 import json, os, subprocess, sys, time
 
-cfg = json.load(open("/eval/mcp.json"))["mcpServers"]
+cfg = (json.load(open("/eval/mcp.json"))["mcpServers"]
+       if os.path.exists("/eval/mcp.json") else {})
 out = {}
 for name, spec in cfg.items():
     env = dict(os.environ)
@@ -82,11 +83,12 @@ def measure(cond, qid, rep):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--reps", type=int, default=3)
+    # MCP を持つ条件と、比べるための CLI・標準の条件（握手が無いことの確認）。
+    ap.add_argument("--conds", default="A1,A2,A4,A5,A6")
     a = ap.parse_args()
     spec = json.load(open(os.path.join(ROOT, "pe5", "questions.json")))
     qs = R.load_questions()
-    # MCP を持つ条件と、比べるための CLI・標準の条件（握手が無いことの確認）。
-    conds = ["A1", "A2", "A4", "A5", "A6"]
+    conds = a.conds.split(",")
     for cond in conds:
         for corpus in R.L2_CORPORA:
             if R.not_applicable(cond, corpus):

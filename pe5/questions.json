@@ -208,6 +208,25 @@
         "dev-c2-s9-ha-reconnect-timeout-doc2code-ident",
         "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident"
       ]
+    },
+    "tools2": {
+      "arm": "rand",
+      "conds": [
+        "A2",
+        "A4",
+        "A6",
+        "A7"
+      ],
+      "questions": [
+        "dev-c1-s1-go-Repo-Entries-ident",
+        "dev-c1-s3-go-app-writeFile-d1-ident",
+        "dev-c4-s7-gates-stable-1-31-parap",
+        "dev-c1-s1-go-movedError-parap",
+        "dev-c1-s3-go-splitFrontmatter-d2-parap",
+        "dev-c2-s1-ts-useLatestDatasourceCheck-parap",
+        "dev-c4-s7-gates-deprecated-1-28-ident",
+        "dev-c2-s6-code-NewMockLokiClient-parap"
+      ]
     }
   }
 }

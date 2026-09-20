@@ -107,6 +107,14 @@ def select():
                                   + pick(picked, [("c1", "S8"), ("c2", "S9"), ("c2", "S6"), ("c4", "S6")]))},
             "tools": {"arm": "rand", "conds": ["A2", "A4", "A6", "A7"],
                       "questions": pick(picked, [("c1", "S8"), ("c2", "S1"), ("c2", "S9"), ("c4", "S6")])},
+            # 残った予算で、A2・A4・A6・A7 の使用率を var の残りの問題にも広げる。
+            "tools2": {"arm": "rand", "conds": ["A2", "A4", "A6", "A7"],
+                       "questions": [q for q in (pick(picked, [("c1", "S1"), ("c1", "S3"),
+                                                               ("c2", "S1"), ("c4", "S7")])
+                                                 + second + pick(picked, [("c1", "S8"), ("c2", "S9"),
+                                                                          ("c2", "S6"), ("c4", "S6")]))
+                                     if q not in pick(picked, [("c1", "S8"), ("c2", "S1"),
+                                                               ("c2", "S9"), ("c4", "S6")])]},
         },
     }
     os.makedirs(os.path.dirname(QUESTIONS), exist_ok=True)
@@ -132,9 +140,12 @@ def spent():
 
 
 def done_sessions():
-    if not os.path.exists(SCORES):
+    """既に流した (ラベル, セッション)。**ラベルを込みにする**。セッションの名前は
+    問題・条件・モデル・回だけで決まるので、別のブロックで同じ升目を流すときに
+    名前がぶつかる（cacheA と cacheB は同じ問題と条件を使う）。"""
+    if not os.path.exists(MANIFEST):
         return set()
-    return {json.loads(l)["session"] for l in open(SCORES) if l.strip()}
+    return {(j.get("label"), j["session"]) for j in map(json.loads, open(MANIFEST)) if j.get("session")}
 
 
 def grade_one(d):
@@ -160,7 +171,7 @@ def run_one(qid, cond, model, rep, label, note):
     return row
 
 
-def block(name, rounds, model, seed, limit, dry=False, cap=None):
+def block(name, rounds, model, seed, limit, dry=False, cap=None, offset=0):
     spec = json.load(open(QUESTIONS))
     b = spec["blocks"][name]
     qs = R.load_questions()
@@ -168,7 +179,7 @@ def block(name, rounds, model, seed, limit, dry=False, cap=None):
              if not R.not_applicable(c, qs[q]["corpus"])]
     rng = random.Random(seed ^ zlib.crc32(name.encode()))
     done, ran = done_sessions(), 0
-    for rnd in range(1, rounds + 1):
+    for rnd in range(1 + offset, rounds + 1 + offset):
         order = cells[:]
         rng.shuffle(order)
         warmed = set()
@@ -186,15 +197,15 @@ def block(name, rounds, model, seed, limit, dry=False, cap=None):
                 continue
             if b["arm"] == "warm" and (cond, corpus) not in warmed:
                 wq = spec["warmup"][corpus]
-                ws = f"{wq}-{cond}-{R.slug(model)}-r{rnd}"
+                ws = (f"pe5-{name}-warmup", f"{wq}-{cond}-{R.slug(model)}-r{rnd}")
                 if ws not in done and not R.not_applicable(cond, corpus):
                     run_one(wq, cond, model, rnd, f"pe5-{name}-warmup",
                             {"block": name, "arm": "warm", "role": "warmup", "round": rnd,
                              "order": i, "question": wq, "cond": cond, "rep": rnd})
                 warmed.add((cond, corpus))
-            session = f"{qid}-{cond}-{R.slug(model)}-r{rnd}"
+            session = (f"pe5-{name}", f"{qid}-{cond}-{R.slug(model)}-r{rnd}")
             if session in done:
-                print(f"skip {session}", flush=True)
+                print(f"skip {session[1]}", flush=True)
                 continue
             row = run_one(qid, cond, model, rnd, f"pe5-{name}",
                           {"block": name, "arm": b["arm"], "role": "measure", "round": rnd,
@@ -219,6 +230,7 @@ def main():
     b.add_argument("--limit", type=float, default=BUDGET)
     b.add_argument("--dry", action="store_true")
     b.add_argument("--max", type=int, default=None, help="このコマンドで流すセッションの上限")
+    b.add_argument("--round-offset", type=int, default=0, help="回の番号をずらす（流し直し用）")
     a = ap.parse_args()
     if a.cmd == "select":
         select()
@@ -226,7 +238,7 @@ def main():
         usd, n = spent()
         print(json.dumps({"usd": round(usd, 4), "sessions": n, "budget": BUDGET}))
     else:
-        block(a.block, a.rounds, a.model, a.seed, a.limit, a.dry, a.max)
+        block(a.block, a.rounds, a.model, a.seed, a.limit, a.dry, a.max, a.round_offset)
 
 
 if __name__ == "__main__":
