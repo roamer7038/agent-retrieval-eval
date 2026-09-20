@@ -74,23 +74,25 @@ AGENT_TOOLS = ["Bash", "Read", "Glob", "Grep", "Write"]
 DISALLOWED = ["WebFetch", "WebSearch"]
 
 # The representative tool of each family (統括の決定, PE3), and how L2 gives
-# it. "cli" puts the commands on the PATH (through the logging wrapper, so
-# that every call is counted); "mcp" registers an MCP server with
-# --mcp-config. "index" is the directory of PE1's index, with the variants
+# it. "cli" puts the commands of "cmds" on the PATH as logging wrappers, so
+# that every call is counted and the session gets the commands the
+# environment text names and no others (readtags but not ctags, zoekt but not
+# zoekt-index: the index is the one L0 built and no session builds one);
+# "mcp" registers an MCP server with --mcp-config. "index" is the directory of PE1's index, with the variants
 # PE1 had to build with settings of their own. "corpora" is where the tool
 # applies at all; "na" says why not, for the report.
 TOOLS = {
     "ctags": dict(
         kind="cli", family="シンボル索引", index="ctags",
-        cmds={"readtags": "/opt/ctags/bin/readtags"}, path=["/opt/ctags/bin"],
+        cmds={"readtags": "/opt/ctags/bin/readtags"},
         corpora=["c1", "c2", "c3", "c4"]),
     "zoekt": dict(
         kind="cli", family="構文・字句", index="zoekt",
-        cmds={"zoekt": "/opt/zoekt/bin/zoekt"}, path=["/opt/zoekt/bin"],
+        cmds={"zoekt": "/opt/zoekt/bin/zoekt"},
         corpora=["c1", "c2", "c3", "c4"]),
     "semble": dict(
         kind="cli", family="BM25・混合（コード）", index="semble",
-        cmds={"semble": "/opt/semble/bin/semble"}, path=["/opt/semble/bin"],
+        cmds={"semble": "/opt/semble/bin/semble"},
         env={"SEMBLE_CACHE_LOCATION": "/idx/semble/semble"},
         variants={"c3": "mem32g"}, memory={"c3": "32g"},
         corpora=["c1", "c2", "c3", "c4"]),
@@ -299,14 +301,15 @@ def index_volume(d, session, tool, corpus, image):
 
 
 def tool_env(cond, corpus):
-    """The container's environment for the CLI tools. An MCP server gets its
-    own environment in mcp.json instead, so that the shell the agent sees is
-    the same in every condition."""
+    """The container's environment for the tools. HOME and PATH stay out of it:
+    an MCP server gets those from mcp.json, so that the shell the agent sees is
+    the same in every condition. The rest (where a tool keeps its index and its
+    configuration) is set here too, because the L0 images point those at L0's
+    own paths (/index) while L2 mounts them at /idx/<tool>."""
     env = {}
     for t in cond_tools(cond):
-        if TOOLS[t]["kind"] == "cli":
-            env.update(TOOLS[t].get("env", {}))
-            env.update(TOOLS[t].get("extra_env", {}).get(corpus, {}))
+        env.update({k: v for k, v in TOOLS[t].get("env", {}).items() if k not in ("HOME", "PATH")})
+        env.update(TOOLS[t].get("extra_env", {}).get(corpus, {}))
     return env
 
 
