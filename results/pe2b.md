@@ -204,4 +204,6 @@ gen/judge.py s9agree $ARE_DATA/gold-work/judge/dev/s9-human.jsonl           # S9
 grade/selfcheck.py tasks/dev/pe2.jsonl /tmp/gradecheck                      # 採点の確認
 ```
 
+注意: 生成器は `results/pe2-audit.jsonl` の最後の監査を見て、誤り・不成立とされた基を飛ばし**別の候補を引く**。いまの監査の記録には、作り直しの途中で引いた候補の判定まで入っているので、この状態から `gen/run.sh dev` をもう一度通すと、外した基の代わりにさらに別の候補が入り、`tasks/dev/pe2.jsonl` は少し増える（その候補は未監査になる）。本番用（`test`）を作るときは、同じ手順を 1 周通したあとに監査を 1 回行う、という順番にする。
+
 記録: 監査は `results/pe2-audit.jsonl`（`sample` が `fresh-pe2b` は機械の正解の抜き取り、`review-pe2b*` は人の確認が要る正解の一次の監査）、札は `results/pe2b-judge-human.jsonl`・`results/pe2b-s9-human.jsonl`（どちらも `by: agent`。PE2 のときの札は `pe2-*` のまま残してある）、S9 の割れたものの裁定は `results/pe2-s9-decisions.jsonl`。
