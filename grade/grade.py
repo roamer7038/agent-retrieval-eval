@@ -4,9 +4,11 @@
     grade/grade.py [--judgments judged.jsonl] <session dir or label dir>... > scores.jsonl
 
 One line per session: correctness of the answer, whether the evidence names a
-gold file, tokens and USD from the result event, tool calls from the stream,
-and the shell commands the agent ran (from cmdlog.tsv, without the ones Claude
-Code runs itself).
+gold file, tokens and USD from the result event, tool calls and the bytes they
+returned (from the stream), the shell commands the agent ran (from cmdlog.tsv,
+without the ones Claude Code runs itself), and whether the session used the
+tool its condition added (added_tool_used / added_tool_calls /
+added_tool_bytes / per_tool, and mcp_servers for the state of the servers).
 
 Gold types:
   path      the answer names this file (relative to the repository in "repo")
@@ -46,6 +48,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "harness"))
+import run as R  # noqa: E402
 from run import load_questions  # noqa: E402
 
 # USD per million tokens of input and output; cache reads and writes are
@@ -56,7 +59,9 @@ PRICES = json.load(open(os.path.join(ROOT, "grade", "prices.json")))
 def norm_path(p, repo=None):
     p = str(p).strip().strip("`")
     p = re.sub(r"^(\./)+", "", p)
-    p = re.sub(r"^/?corpus/", "", p)
+    # The corpus is mounted at /corpus and at /work; a tool's output names the
+    # second. No repository of the corpora is called corpus or work.
+    p = re.sub(r"^/?(corpus|work)/", "", p)
     if repo and p.startswith(repo + "/"):
         p = p[len(repo) + 1:]
     return p
@@ -189,19 +194,40 @@ def evidence_hit(evidence, accept):
 
 
 def stream_stats(path):
-    tools, result = {}, None
+    """Tool calls by name, the bytes each tool gave back, the MCP servers of
+    the session and their state, and the result event.
+
+    An MCP call is a tool_use whose name is mcp__<server>__<tool>; the bytes
+    are the tool_result that carries the same tool_use_id (the text the agent
+    was given, which is what a session pays for)."""
+    tools, bytes_, ids, mcp, result = {}, {}, {}, None, None
     for line in open(path):
         try:
             j = json.loads(line)
         except ValueError:
             continue
-        if j.get("type") == "assistant":
+        if j.get("type") == "system" and j.get("subtype") == "init" and mcp is None:
+            mcp = {s.get("name"): s.get("status") for s in j.get("mcp_servers", [])}
+        elif j.get("type") == "assistant":
             for c in j["message"].get("content", []):
                 if c.get("type") == "tool_use":
                     tools[c["name"]] = tools.get(c["name"], 0) + 1
+                    ids[c.get("id")] = c["name"]
+        elif j.get("type") == "user":
+            for c in (j.get("message") or {}).get("content", []) or []:
+                if isinstance(c, dict) and c.get("type") == "tool_result":
+                    name = ids.get(c.get("tool_use_id"))
+                    if name is None:
+                        continue
+                    body = c.get("content")
+                    if isinstance(body, list):
+                        n = sum(len(x.get("text", "").encode()) for x in body if isinstance(x, dict))
+                    else:
+                        n = len(str(body or "").encode())
+                    bytes_[name] = bytes_.get(name, 0) + n
         elif j.get("type") == "result":
             result = j
-    return tools, result
+    return tools, bytes_, mcp or {}, result
 
 
 def usd(model, u, share_1h):
@@ -236,8 +262,32 @@ def commands(path):
             if row["argv"] == "cat" and not out:
                 continue
             out.append({"cmd": row["argv"].split(" ", 1)[0], "ms": int(row["ms"]),
-                        "stdout_bytes": int(row["stdout_bytes"])})
+                        "stdout_bytes": int(row["stdout_bytes"]), "exit": int(row.get("exit") or 0)})
     return out
+
+
+def tool_usage(cond, tools, tool_bytes, cmds):
+    """Whether the session used the tool the condition added, and how much.
+
+    A CLI tool is counted from the shell commands it is called by (the
+    logging wrapper sees every call), an MCP tool from the tool_use events of
+    its server. "bytes" is what came back: the stdout of the commands, or the
+    text of the tool results."""
+    calls, byts, per = 0, 0, {}
+    for t in R.cond_tools(cond):
+        spec = R.TOOLS[t]
+        if spec["kind"] == "cli":
+            names = set(spec.get("cmds", {}))
+            n = sum(1 for c in cmds if c["cmd"] in names)
+            b = sum(c["stdout_bytes"] for c in cmds if c["cmd"] in names)
+        else:
+            prefix = f"mcp__{spec['server']}__"
+            n = sum(v for k, v in tools.items() if k.startswith(prefix))
+            b = sum(v for k, v in tool_bytes.items() if k.startswith(prefix))
+        per[t] = {"calls": n, "bytes": b}
+        calls, byts = calls + n, byts + b
+    return {"added_tools": R.cond_tools(cond), "added_tool_calls": calls,
+            "added_tool_bytes": byts, "added_tool_used": calls > 0, "per_tool": per}
 
 
 def grade(d, qs, judged=None):
@@ -260,8 +310,10 @@ def grade(d, qs, judged=None):
     evidence = {norm_path(e) for e in (ans.get("evidence") or [])} if row["answer_valid"] else set()
     gold_ev = q.get("evidence", [])
     row["evidence_hit"] = evidence_hit(evidence, gold_ev) if gold_ev else None
-    tools, result = stream_stats(os.path.join(d, "stream.jsonl"))
+    tools, tool_bytes, mcp, result = stream_stats(os.path.join(d, "stream.jsonl"))
     row["tool_calls"] = tools
+    row["tool_bytes"] = tool_bytes
+    row["mcp_servers"] = mcp
     row["turns"] = result.get("num_turns") if result else None
     row["result_subtype"] = result.get("subtype") if result else None
     usage = (result or {}).get("modelUsage", {})
@@ -273,6 +325,8 @@ def grade(d, qs, judged=None):
     row["shell_commands"] = len(cmds)
     row["shell_ms"] = sum(c["ms"] for c in cmds)
     row["shell_stdout_bytes"] = sum(c["stdout_bytes"] for c in cmds)
+    row["shell_by_cmd"] = {c["cmd"]: row.get("shell_by_cmd", {}).get(c["cmd"], 0) + 1 for c in cmds}
+    row.update(tool_usage(meta["cond"], tools, tool_bytes, cmds))
     return row
 
 

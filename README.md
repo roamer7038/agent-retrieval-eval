@@ -15,6 +15,7 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `corpora/corpora.yaml` | 題材のリポジトリと固定したコミット |
 | `scripts/fetch_corpora.py` | 題材を `data/corpora/` に取得する |
 | `docker/agent.Dockerfile` | セッションを動かすイメージ（Claude Code の版を固定） |
+| `docker/l2/` | L2 の条件ごとのセッションのイメージ（L0 の道具のイメージ＋Claude Code）と組み立て |
 | `docker/proxy/` | セッションから外への唯一の経路。許可したホスト（Claude の API、事前実験のローカル LLM）だけを通す |
 | `harness/run.py` | 1 問を 1 セッションとして実行し、記録を残す |
 | `tasks/` | 課題文の雛形、条件ごとの環境の説明、問題と正解 |
@@ -23,6 +24,7 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `docker/tools/`、`scripts/l0.py`、`scripts/l0_table.py` | L0（道具の導入と索引の測定）。道具ごとのイメージ、測定、表 |
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
 | `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`） |
+| `harness/run.py` の `CONDS`・`TOOLS` | L2 の条件（A0〜A7）と、条件ごとの道具・渡し方・索引 |
 | `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体） |
 
 ## 使い方
@@ -33,8 +35,11 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 scripts/fetch_corpora.py c1
 docker build -t are-proxy:dev docker/proxy
 docker build -t are-agent:dev -f docker/agent.Dockerfile docker
+docker/l2/build.sh                                                              # L2 の条件のイメージ
+harness/run.py plan                                                             # 条件 × 題材の当てはまり
 harness/run.py run --question pe0-s1 --model local:qwen3.8:27b --label pe0      # 1 セッション
-harness/run.py batch --questions all --models local:qwen3.8:27b --label pe0     # まとめて
+harness/run.py batch --questions all --conds A1,A2 --models local:qwen3.8:27b --label pe0
+harness/run.py smoke --question dev-c1-s1-go-scalarSpan-ident --cond A2 -- bash -lc 'readtags -t /idx/ctags/wikictl.tags -n -e - main'
 grade/grade.py ../agent-retrieval-eval-runs/pe0 > scores.jsonl       # 自由記述は --judgments で判定を渡す
 grade/summarize.py scores.jsonl
 
@@ -57,6 +62,9 @@ l1/grade.py table                            # 道具 × シナリオ（nDCG@10�
 - L0 の測定は 1 回 8 vCPU・16GB・ネットワークなし、索引の作成と更新はそれぞれ 60 分が上限。計測枠（`--slot`）ごとに同時に 1 つだけ動く（ロックで待つ）。
 - L1 は L0 と同じ枠のロックを使い、道具を常駐させて 1 問ずつ検索する。検索の時間と立ち上げの時間を分けて記録する。規則（質問の変換・順位・打ち切り・同点）は `l1/tasks.py` と `l1/worker.py` の冒頭に書いてあり、そのまま事前登録に載せられる。
 - ローカル LLM の結果の `total_cost_usd` は、未知のモデルに仮の単価を当てた値なので使わない（採点では USD を出さない）。
+- L2 の条件は A0（題材を渡さない）・A1（標準）・A2〜A7（A1 ＋ 系統の代表の道具 1 つ）。道具は本来の渡し方で渡す（CLI は PATH に、MCP は `--mcp-config` で）。索引は L0 が作ったものを下層にした overlay で渡すので、道具は書けるが索引そのものは変わらず、セッションの中では索引を作らない。
+- 題材の複製は `/corpus`（課題文が指す道具）と `/work`（索引を作ったときのパス）の両方に見える。同じファイルで、道具の出力は後者を指すことがある。
+- 条件ごとの環境の説明は `tasks/env/A*.md`。道具の説明は「名前・何ができるか・呼び出し方の 1 例」の 2 行に揃える（手順の指南は書かない）。
 
 ## 問題と正解の生成
 
