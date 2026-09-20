@@ -21,7 +21,9 @@ to $ARE_RUNS (default ../agent-retrieval-eval-runs)/<label>/<question>-<cond>-<m
                  after the session unless $ARE_KEEP_CORPUS=1
   bin/           logging wrappers of the shell commands, first on PATH
   log/           cmdlog.tsv of the wrappers
-  idx/<tool>/    the writable upper layer over the tool's index (L2)
+  idx/<tool>/    the writable upper layer over the tool's index (L2); what the
+                 tool wrote is measured into meta.json and then removed unless
+                 $ARE_KEEP_CORPUS=1
   mcp.json       the MCP servers of the condition, when it has any
 
 A model is <backend>:<name>. "local" runs Claude Code against the Ollama
@@ -311,6 +313,17 @@ def index_volume(d, session, tool, corpus, image):
     return vol
 
 
+def dir_bytes(path):
+    n = 0
+    for root, _, files in os.walk(path):
+        for fn in files:
+            try:
+                n += os.lstat(os.path.join(root, fn)).st_size
+            except OSError:
+                pass
+    return n
+
+
 def tool_env(cond, corpus):
     """The container's environment for the tools. HOME and PATH stay out of it:
     an MCP server gets those from mcp.json, so that the shell the agent sees is
@@ -479,12 +492,18 @@ def run_session(qid, cond, model, rep, label):
         for vol in volumes:
             subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
         if volumes:
+            # How much each tool wrote into its index (overlayfs copies a file
+            # up whole on the first write: Serena's cache is 65 MB, qmd's
+            # SQLite on c4 is 356 MB), then the writes themselves go: they are
+            # the tool's own state, not a record of the session.
+            meta["index_upper_bytes"] = {t: dir_bytes(os.path.join(d, "idx", t, "upper"))
+                                         for t in cond_tools(cond)}
             # The overlay's work directory belongs to root (the kernel makes
             # it), which would stop the session's directory from ever being
-            # removed; root in a container can take it away. The upper layer
-            # stays as the record of what the tool wrote.
-            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx",
-                            image, "sh", "-c", "rm -rf /idx/*/ovl"], capture_output=True)
+            # removed; root in a container can take it away.
+            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx", image,
+                            "sh", "-c", "rm -rf /idx/*/ovl" + ("" if KEEP_CORPUS else " /idx/*/upper")],
+                           capture_output=True)
         # The copy of the corpus is the largest part of a session (c2 is 2.3 GB)
         # and can be made again from the pinned commit, so it goes unless
         # ARE_KEEP_CORPUS is set.
@@ -517,12 +536,18 @@ def smoke(qid, cond, argv):
         for vol in volumes:
             subprocess.run(["docker", "volume", "rm", "-f", vol], capture_output=True)
         if volumes:
+            # How much each tool wrote into its index (overlayfs copies a file
+            # up whole on the first write: Serena's cache is 65 MB, qmd's
+            # SQLite on c4 is 356 MB), then the writes themselves go: they are
+            # the tool's own state, not a record of the session.
+            meta["index_upper_bytes"] = {t: dir_bytes(os.path.join(d, "idx", t, "upper"))
+                                         for t in cond_tools(cond)}
             # The overlay's work directory belongs to root (the kernel makes
             # it), which would stop the session's directory from ever being
-            # removed; root in a container can take it away. The upper layer
-            # stays as the record of what the tool wrote.
-            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx",
-                            image, "sh", "-c", "rm -rf /idx/*/ovl"], capture_output=True)
+            # removed; root in a container can take it away.
+            subprocess.run(["docker", "run", "--rm", "--user", "0:0", "-v", f"{d}/idx:/idx", image,
+                            "sh", "-c", "rm -rf /idx/*/ovl" + ("" if KEEP_CORPUS else " /idx/*/upper")],
+                           capture_output=True)
     print(f"# session dir: {d}", file=sys.stderr)
     return rc
 
