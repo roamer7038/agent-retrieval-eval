@@ -14,5 +14,9 @@ python3 cand_code.py --split "$split"
 python3 cand_git.py --split "$split"
 python3 cand_docs.py --split "$split"
 python3 cand_s8.py --split "$split"
+# S9: two judges decide which gold files handle the term; the rest becomes
+# optional (the gold cannot be written before this, so it runs here)
+python3 judge.py s9check --split "$split"
+python3 judge.py s9apply --split "$split"
 python3 phrase.py --split "$split"
 python3 build.py --split "$split"

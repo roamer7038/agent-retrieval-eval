@@ -5,11 +5,12 @@ from patches merged after the training cutoff) and S6 (history).
     gen/cand_git.py [--split dev] [--scenario S2,S6]
 
 S2: a patch merged after CUTOFF that touches 1-4 non-test source files, whose
-added lines mostly survive at the pinned commit. The machine gold is the set
-of those files; a person confirms that the question (written later from the
-commit message) points at them and adds the files the behaviour depends on
-(ContextBench's way). S6: the release (c1), pull request (c2) or date (wiki,
-c4) where a function or page first appeared, from git log.
+added lines mostly survive at the pinned commit. The gold names the main file
+alone (see main_file); every other file the patch touched is optional, so
+naming it is neither required nor wrong. A person confirms that the question
+(written later from the commit message) points at the main file. S6: the
+release (c1), pull request (c2) or date (wiki, c4) where a function or page
+first appeared, from git log.
 Output: gold-work/cand/<split>/S2.jsonl, S6.jsonl
 """
 import argparse
@@ -18,7 +19,8 @@ import os
 import re
 import subprocess
 
-from common import CAND, CUTOFF, OUT, git, read_jsonl, repo_dir, rng, split_of, write_jsonl
+from common import (CAND, CUTOFF, OUT, dropped_base_ids, git, is_test_path, read_jsonl, repo_dir, rng, split_of,
+                    write_jsonl)
 
 CODE_EXT = {"c1": (".go",), "c2": (".go", ".ts", ".tsx"), "c3": (".c", ".h")}
 REPO = {"c1": "wikictl", "c2": "grafana", "c3": "linux"}
@@ -27,8 +29,7 @@ N6 = {("c1", "wikictl"): 5, ("c1", "wiki"): 3, ("c2", "grafana"): 6, ("c4", "web
 
 
 def is_test(path):
-    return bool(re.search(r"(_test\.go|\.test\.tsx?|\.spec\.tsx?|/testdata/|/__tests__/|/__mocks__/|/mocks?/|"
-                          r"/tools/testing/|/selftests/|/test/|/e2e)", path))
+    return is_test_path(path)
 
 
 def commits(corpus):
@@ -68,18 +69,47 @@ def numstat(corpus, h):
 
 
 def added_lines(corpus, h, path):
+    """The lines the patch adds to one file, the functions whose body they
+    fall in (from the hunk headers), and how many of the added lines are
+    code (see code_lines)."""
     out = git(corpus, REPO[corpus], "show", "-U0", "--format=", h, "--", path)
     lines, funcs = [], set()
     for line in out.splitlines():
         if line.startswith("@@"):
             m = re.search(r"@@[^@]*@@\s*(.*)$", line)
-            if m and m.group(1):
-                f = func_name(m.group(1))
-                if f:
-                    funcs.add(f)
+            f = func_name(m.group(1)) if m and m.group(1) else None
+            if f:
+                funcs.add(f)
         elif line.startswith("+") and not line.startswith("+++"):
             lines.append(line[1:].strip())
-    return lines, funcs
+    return lines, funcs, code_lines(lines)
+
+
+PUNCT = re.compile(r"[{};=]")
+
+
+def code_lines(lines):
+    """How many of the added lines are code rather than text. A line that is
+    blank, a comment, or a sentence (five words or more and none of { } ; = )
+    is text: the help text of a command, a line of a table, a paragraph of a
+    comment block. Which file took the most of these decides the main file,
+    so a change of the help text does not outweigh the implementation."""
+    n = 0
+    for line in lines:
+        t = line.strip()
+        if not t or t.startswith(("//", "/*", "*/", "*", "#", "<!--", "|", "-")):
+            continue
+        if not PUNCT.search(t) and len(t.split()) >= 5:
+            continue
+        n += 1
+    return n
+
+
+def main_file(stats):
+    """The main file of a patch, by a rule that can be written down: the file
+    that took the most added lines of code, then the most added lines, then
+    the first path. stats is a list of (path, added, code)."""
+    return sorted(stats, key=lambda s: (-s[2], -s[1], s[0]))[0][0]
 
 
 def func_name(ctx):
@@ -116,10 +146,12 @@ def s2(corpus, split, n):
     pool = [c for c in commits(corpus) if c[1] >= CUTOFF and subject_ok(corpus, c[2])
             and split_of(f"{corpus}:S2:{c[0]}") == split]
     r.shuffle(pool)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for h, date, subj in pool:
         if len(out) == n:
             break
+        if f"{split}-{corpus}-s2-{h[:10]}" in dropped:
+            continue  # audited as a wrong gold or an invalid question: draw another
         rows = numstat(corpus, h)
         code = [(a, d, p) for a, d, p in rows if p.endswith(CODE_EXT[corpus]) and not is_test(p)
                 and not re.search(r"(\.gen\.|_gen\.go|generated|/locales/|\.pb\.go|zz_)", p)]
@@ -128,34 +160,40 @@ def s2(corpus, split, n):
         added = sum(a for a, _, _ in code)
         if not 5 <= added <= 200:
             continue
-        files, funcs, surv = [], set(), []
+        files, funcs, surv, stats = [], set(), [], []
         for a, d, p in code:
-            lines, fs = added_lines(corpus, h, p)
+            lines, fs, ncode = added_lines(corpus, h, p)
             s = survives(corpus, p, lines)
             if s >= 0.6:
                 files.append(p)
                 funcs |= fs
-            surv.append((p, round(s, 2)))
+                stats.append((p, a, ncode))
+            surv.append((p, round(s, 2), ncode))
         if not files:
             continue
+        main = main_file(stats)
         body = git(corpus, REPO[corpus], "show", "-s", "--format=%b", h).strip()
         body = re.sub(r"\n(Signed-off-by|Reviewed-by|Acked-by|Tested-by|Co-authored-by|Cc|Link|Reported-by|"
                       r"Suggested-by|Fixes|Closes|Message-ID|Co-developed-by):.*", "", body, flags=re.I)
-        other = sorted({p for _, _, p in rows} - set(files))
+        other = sorted({p for _, _, p in rows} - {main})
         repo = REPO[corpus]
         out.append({
             "base_id": f"{split}-{corpus}-s2-{h[:10]}",
             "corpus": corpus, "scenario": "S2", "split": split,
             "commit": {"hash": h, "date": date, "subject": subj, "body": body[:1500]},
             "identifiers": sorted(funcs)[:5],
-            "answer_format": "ファイルのパスの一覧（リポジトリの根から）。関係の強い順に",
-            "gold": {"type": "files", "repo": repo, "value": sorted(files)},
-            "evidence_accept": [f"{repo}/{p}" for p in sorted(files)],
+            "answer_format": "ファイルのパスの一覧（リポジトリの根から）。関係の強い順に。"
+                             "振る舞いを実装しているファイルを必ず挙げ、それに付随して変わるだけのファイルは挙げても挙げなくてもよい",
+            # the main file is required, the other files of the patch are
+            # optional: naming one is neither required nor wrong
+            "gold": {"type": "files", "repo": repo, "value": [main], "optional": other},
+            "evidence_accept": sorted({f"{repo}/{p}" for p in [main] + files}),
             "review": {"required": True,
-                       "check": "質問が指す振る舞いが patch の変更と一致するか。正解のファイルに過不足が無いか"
-                                "（振る舞いを実装する依存のファイルを補う、付随の変更を外す）",
-                       "machine_flags": {"survival": surv, "other_files_in_patch": other[:10]}},
-            "source": {"method": "git show --numstat of a patch merged after the cutoff"},
+                       "check": "質問が指す振る舞いを主に実装しているのが正解のファイル（gold.value）か。"
+                                "付随の変更（ヘルプ文・呼び出し側・テスト）は optional に入っているか",
+                       "machine_flags": {"main": main, "survival": surv, "other_files_in_patch": other[:10]}},
+            "source": {"method": "git show --numstat of a patch merged after the cutoff",
+                       "main_file_rule": "追加行のうちコードの行（空行・コメント・5 語以上で {};= を含まない文を除いたもの）が最多のファイル。同数なら追加行、次にパスの順"},
         })
     return out
 
@@ -198,10 +236,12 @@ def s6_c1_code(split, n):
             pool.append(d)
     r = rng(split, "S6", "c1", "code")
     r.shuffle(pool)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for d in pool:
         if len(out) == n:
             break
+        if f"{split}-c1-s6-code-{d['id'].replace('.', '-')}" in dropped:
+            continue
         if d["recv"]:  # the receiver's type too: a name like Error is shared by many types
             regex = rf"^func \(\w* ?\*?{d['recv']}(\[[^]]*\])?\) {d['name']}[\[(]"
         else:
@@ -234,10 +274,12 @@ def s6_pages(corpus, repo, split, n, root, lang_note):
     files = [f for f in sorted(files) if split_of(f"{corpus}:S6:{f}") == split]
     r = rng(split, "S6", corpus, repo)
     r.shuffle(files)
-    out = []
-    for f in files[:n * 3]:
+    out, dropped = [], dropped_base_ids()
+    for f in files:
         if len(out) == n:
             break
+        if f"{split}-{corpus}-s6-page-" + re.sub(r"[^A-Za-z0-9]+", "-", f)[-60:] in dropped:
+            continue
         log = git(corpus, repo, "log", "--follow", "--diff-filter=A", "--format=%H%x09%ad", "--date=short", "--", f)
         rows = [l.split("\t") for l in log.splitlines()]
         if not rows:
@@ -298,10 +340,12 @@ def s6_c2(split, n):
             pool.append(d)
     r = rng(split, "S6", "c2")
     r.shuffle(pool)
-    out = []
+    out, dropped = [], dropped_base_ids()
     for d in pool:
         if len(out) == n:
             break
+        if f"{split}-c2-s6-code-{d['id']}" in dropped:
+            continue
         regex = rf"^func {d['name']}[\[(]"
         c = intro_commit("c2", "grafana", regex, ["pkg/"])
         if not c:

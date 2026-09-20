@@ -3,9 +3,10 @@
 procedures), and the answers it was tried on.
 
     gen/judge.py answers [--split dev] [--n 20]   # answers to judge (ANSWER_MODEL)
-    gen/judge.py judge [--split dev]              # the judge's verdicts (JUDGE_MODEL)
+    gen/judge.py judge [--split dev]              # two judges' verdicts
     gen/judge.py agree <human.jsonl>              # agreement with a person's labels
     gen/judge.py s9check [--split dev]            # S9: does each gold file handle the term
+    gen/judge.py s9apply [--split dev]            # S9: keep the files both judges call handled
     gen/judge.py s9agree <human.jsonl>            # agreement of s9check with a person
 
 The answers are made to vary in quality: one written from the gold section,
@@ -14,14 +15,21 @@ key points: the hard cases), one written from another candidate's section,
 one written from no text. The judge sees the question,
 the key points of the gold, the gold section and the answer, and decides per
 key point whether the answer states it, and overall "correct" (every key
-point, nothing that contradicts the section) or "incorrect". A person labels
-the same answers blind to the judge (human.jsonl: {"answer_id", "correct"}),
-and agree reports the raw agreement and Cohen's kappa.
+point, nothing that contradicts the section) or "incorrect". Two judges of different lineage (gemma4 and muse-glimmer) judge every
+answer. They agree on most, and the ones they split on are written down so
+that a person can settle those alone. A person labels the same answers blind
+to the judges (human.jsonl: {"answer_id", "correct"}), and agree reports the
+raw agreement and Cohen's kappa of each judge, of the two judges with each
+other, and of their agreed verdicts.
 S9 answers are lists of files and are graded without a judge; what needs a
 judgement there is the gold: a file that holds the term only in a list of
-names is not the file that handles it. s9check shows the judge the
-document's section and the lines around the term in each gold file, and asks
-whether the file handles (or, for a page, explains) the term.
+names is not the file that handles it. s9check shows both judges
+the document's section and the lines around the term in each gold file, and
+asks whether the file handles (or, for a page, explains) the term; "handles"
+is read widely (the value is read, written, or decides what the code does).
+s9apply then keeps in the gold the files both judges call handled and moves
+the rest to "optional", so that neither a file that only lists the name is
+required nor one that the judges split on.
 Files: gold-work/judge/<split>/answers.jsonl, verdicts.jsonl, s9check.jsonl
 """
 import argparse
@@ -31,10 +39,12 @@ import os
 import sys
 
 import llm
-from common import WORK, read_jsonl, read_lines, rng, write_jsonl
+from common import ROOT, WORK, read_jsonl, read_lines, rng, write_jsonl
 
 ANSWER_MODEL = "ornith-1.5:35b"
 JUDGE_MODEL = llm.CHECK_MODEL
+# two judges of different lineage; the answers are written by a third model
+JUDGES = [("A", llm.CHECK_MODEL), ("B", llm.CHECK_MODEL_2)]
 JDIR = os.path.join(WORK, "judge")
 
 ANSWER = """次の質問に、日本語で答えてください。{ctx}
@@ -128,16 +138,27 @@ def make_answers(split, n):
 
 
 def judge(split):
+    """Both judges on every answer. "verdict" is what they agree on and None
+    when they split; "split" says which those are, for a person to settle."""
     rows = read_jsonl(os.path.join(JDIR, split, "answers.jsonl"))
     qs = {q["base_id"]: q for q in questions(split)}
-    out = []
+    out, splits = [], 0
     for a in rows:
         q = qs[a["base_id"]]
-        j = llm.chat_json(JUDGE_MODEL, JUDGE.format(q=a["question"], points="\n".join(f"{i + 1}. {p}" for i, p in enumerate(a["points"])),
-                                                    ref=ref_text(q), answer=a["answer"]), schema=JUDGE_SCHEMA)
-        out.append({"answer_id": a["answer_id"], "verdict": (j or {}).get("verdict"), "result": j})
+        prompt = JUDGE.format(q=a["question"], points="\n".join(f"{i + 1}. {p}" for i, p in enumerate(a["points"])),
+                              ref=ref_text(q), answer=a["answer"])
+        by, res = {}, {}
+        for name, model in JUDGES:
+            j = llm.chat_json(model, prompt, schema=JUDGE_SCHEMA)
+            by[name] = (j or {}).get("verdict")
+            res[name] = j
+        vs = set(by.values())
+        agreed = len(vs) == 1 and None not in vs
+        splits += not agreed
+        out.append({"answer_id": a["answer_id"], "verdict": by["A"] if agreed else None, "split": not agreed,
+                    "by": by, "models": {n: m for n, m in JUDGES}, "result": res})
     write_jsonl(os.path.join(JDIR, split, "verdicts.jsonl"), out)
-    print(len(out), "verdicts", llm.stats, file=sys.stderr)
+    print(len(out), "verdicts,", splits, "split", llm.stats, file=sys.stderr)
 
 
 S9CHECK = """文書とソースコードの対応を確認してください。
@@ -148,9 +169,9 @@ S9CHECK = """文書とソースコードの対応を確認してください。
 次は、ファイル {file} の中で `{term}` が現れる箇所です（前後の行を含む）:
 {snippets}
 
-このファイルは `{term}` を「扱っている」と言えるかを判定してください。
-- コードのファイルなら: `{term}` の値を読み取る・設定する・その値に従って処理を変えるなら "handles"。名前の一覧・表・コメント・テストのデータに名前が現れるだけなら "names_only"。
-- 文書のページなら: `{term}` が何であるか・どう使うかを説明していれば "handles"。一覧や例の中に名前が現れるだけなら "names_only"。
+このファイルは `{term}` を「扱っている」と言えるかを判定してください。「扱っている」は広くとります。
+- コードのファイルなら: `{term}` の値を読み取る・設定する・既定値や許される値を定める・他へ渡す・その値によって処理を変えるなら "handles"。名前が一覧・表・コメント・テストのデータに現れるだけで、その値に応じて何かが変わる記述がどこにも無いなら "names_only"。
+- 文書のページなら: `{term}` が何であるか・どう使うか・どう効くかを説明していれば "handles"。一覧や例の中に名前が現れるだけなら "names_only"。
 - reason に理由を短く書く。
 JSON で答えてください。"""
 
@@ -175,26 +196,90 @@ def snippets(corpus, repo, path, term, around=4, most=3):
 def s9check(split):
     from common import CAND
     rows = read_jsonl(os.path.join(CAND, split, "S9.jsonl"))
-    out = []
+    out, splits = [], 0
     for c in rows:
         term, g = c["subject"]["label"], c["gold"]
-        for f in g["value"]:
+        for f in g["value"]:   # only the files the gold requires
             snip = snippets(c["corpus"], g["repo"], f, term)
-            j = llm.chat_json(JUDGE_MODEL, S9CHECK.format(term=term, doc=c["subject"]["doc"][:800], file=f, snippets=snip),
-                              schema=S9_SCHEMA)
-            out.append({"item": f"{c['base_id']}:{f}", "base_id": c["base_id"], "role": (j or {}).get("role"), "result": j})
+            prompt = S9CHECK.format(term=term, doc=c["subject"]["doc"][:800], file=f, snippets=snip)
+            by, res = {}, {}
+            for name, model in JUDGES:
+                j = llm.chat_json(model, prompt, schema=S9_SCHEMA)
+                by[name] = (j or {}).get("role")
+                res[name] = j
+            agreed = len(set(by.values())) == 1 and None not in set(by.values())
+            splits += not agreed
+            out.append({"item": f"{c['base_id']}:{f}", "base_id": c["base_id"], "file": f,
+                        "role": by["A"] if agreed else None, "split": not agreed, "by": by, "result": res})
     write_jsonl(os.path.join(JDIR, split, "s9check.jsonl"), out)
-    print(len(out), "files", llm.stats, file=sys.stderr)
+    print(len(out), "files,", splits, "split", llm.stats, file=sys.stderr)
+
+
+# A person's (here: the agent's) decision on the files the two judges split
+# on, one line of {"item", "role", "note"}; s9apply follows it.
+S9_DECISIONS = os.path.join(ROOT, "results", "pe2-s9-decisions.jsonl")
+
+
+def s9apply(split):
+    """Rewrite the S9 candidates. A file both judges call a list of names
+    moves to "optional", where naming it is neither required nor wrong; the
+    files they split on stay in the gold unless a decision in
+    results/pe2-s9-decisions.jsonl says otherwise, and are printed so that
+    they can be settled. A candidate with no file left is dropped."""
+    from common import CAND
+    path = os.path.join(CAND, split, "S9.jsonl")
+    checks = collections.defaultdict(dict)
+    for x in read_jsonl(os.path.join(JDIR, split, "s9check.jsonl")):
+        checks[x["base_id"]][x["file"]] = x
+    decided = {}
+    if os.path.exists(S9_DECISIONS):
+        decided = {d["item"]: d["role"] for d in read_jsonl(S9_DECISIONS)}
+    rows, dropped, moved, undecided = [], [], 0, []
+
+    def role(base_id, f):
+        item = f"{base_id}:{f}"
+        if item in decided:
+            return decided[item]
+        x = checks[base_id].get(f) or {}
+        if x.get("split"):
+            undecided.append(item)
+            return "handles"   # kept until a person settles it
+        return x.get("role")
+
+    for c in read_jsonl(path):
+        g = c["gold"]
+        files = list(g["value"]) + list(g.get("optional") or [])
+        keep = [f for f in files if role(c["base_id"], f) == "handles"]
+        rest = [f for f in files if f not in keep]
+        moved += len(rest)
+        if not keep:
+            dropped.append(c["base_id"])
+            continue
+        g["value"], g["optional"] = sorted(keep), sorted(rest)
+        c["s9check"] = {f: (checks[c["base_id"]].get(f, {}) or {}).get("by") for f in files}
+        rows.append(c)
+    write_jsonl(path, rows)
+    print(json.dumps({"kept": len(rows), "dropped": dropped, "files_moved_to_optional": moved,
+                      "undecided_splits": undecided}, ensure_ascii=False), file=sys.stderr)
 
 
 def s9agree(split, human_path):
-    v = {x["item"]: x["role"] == "handles" for x in read_jsonl(os.path.join(JDIR, split, "s9check.jsonl"))}
+    rows = {x["item"]: x for x in read_jsonl(os.path.join(JDIR, split, "s9check.jsonl"))}
     h = {x["item"]: x["role"] == "handles" for x in read_jsonl(human_path)}
-    ids = sorted(set(v) & set(h))
-    pairs = [(h[i], v[i]) for i in ids]
-    po, k = kappa(pairs)
-    print(json.dumps({"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3),
-                      "disagreements": [i for i in ids if h[i] != v[i]]}, ensure_ascii=False, indent=1))
+    ids = sorted(set(rows) & set(h))
+    out = {"n": len(ids)}
+    for name, _ in JUDGES:
+        pairs = [(h[i], rows[i]["by"].get(name) == "handles") for i in ids if rows[i]["by"].get(name)]
+        po, k = kappa(pairs) if pairs else (float("nan"), float("nan"))
+        out[f"judge_{name}"] = {"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3),
+                                "disagreements": [i for i in ids
+                                                  if rows[i]["by"].get(name) and h[i] != (rows[i]["by"][name] == "handles")]}
+    both = [i for i in ids if rows[i]["by"].get("A") and rows[i]["by"].get("B")]
+    jj = [(rows[i]["by"]["A"] == "handles", rows[i]["by"]["B"] == "handles") for i in both]
+    po, k = kappa(jj) if jj else (float("nan"), float("nan"))
+    out["judge_A_vs_B"] = {"n": len(jj), "agreement": round(po, 3), "kappa": round(k, 3),
+                           "split_items": [i for i in both if rows[i]["by"]["A"] != rows[i]["by"]["B"]]}
+    print(json.dumps(out, ensure_ascii=False, indent=1))
 
 
 def kappa(pairs):
@@ -207,22 +292,35 @@ def kappa(pairs):
 
 
 def agree(split, human_path):
-    v = {x["answer_id"]: x["verdict"] == "correct" for x in read_jsonl(os.path.join(JDIR, split, "verdicts.jsonl"))}
+    """Each judge against the person's labels, the two judges against each
+    other, and the answers they agree on against the person."""
+    rows = {x["answer_id"]: x for x in read_jsonl(os.path.join(JDIR, split, "verdicts.jsonl"))}
     h = {x["answer_id"]: bool(x["correct"]) for x in read_jsonl(human_path)}
-    ids = sorted(set(v) & set(h))
-    pairs = [(h[i], v[i]) for i in ids]
-    po, k = kappa(pairs)
-    table = collections.Counter((a, b) for a, b in pairs)
-    print(json.dumps({"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3),
-                      "human_correct_llm_correct": table[(True, True)], "human_correct_llm_incorrect": table[(True, False)],
-                      "human_incorrect_llm_correct": table[(False, True)],
-                      "human_incorrect_llm_incorrect": table[(False, False)],
-                      "disagreements": [i for i in ids if h[i] != v[i]]}, ensure_ascii=False, indent=1))
+    ids = sorted(set(rows) & set(h))
+    out = {"n": len(ids)}
+    for name, _ in JUDGES:
+        pairs = [(h[i], rows[i]["by"].get(name) == "correct") for i in ids
+                 if rows[i]["by"].get(name) is not None]
+        po, k = kappa(pairs)
+        t = collections.Counter(pairs)
+        out[f"judge_{name}"] = {"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3),
+                                "human_correct_llm_incorrect": t[(True, False)],
+                                "human_incorrect_llm_correct": t[(False, True)]}
+    both = [i for i in ids if rows[i]["by"].get("A") is not None and rows[i]["by"].get("B") is not None]
+    jj = [(rows[i]["by"]["A"] == "correct", rows[i]["by"]["B"] == "correct") for i in both]
+    po, k = kappa(jj) if jj else (float("nan"), float("nan"))
+    out["judge_A_vs_B"] = {"n": len(jj), "agreement": round(po, 3), "kappa": round(k, 3)}
+    agreed = [i for i in both if rows[i]["by"]["A"] == rows[i]["by"]["B"]]
+    pairs = [(h[i], rows[i]["by"]["A"] == "correct") for i in agreed]
+    po, k = kappa(pairs) if pairs else (float("nan"), float("nan"))
+    out["agreed_only_vs_human"] = {"n": len(pairs), "agreement": round(po, 3), "kappa": round(k, 3)}
+    out["split_answers"] = [i for i in both if rows[i]["by"]["A"] != rows[i]["by"]["B"]]
+    print(json.dumps(out, ensure_ascii=False, indent=1))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["answers", "judge", "agree", "s9check", "s9agree"])
+    ap.add_argument("cmd", choices=["answers", "judge", "agree", "s9check", "s9apply", "s9agree"])
     ap.add_argument("human", nargs="?")
     ap.add_argument("--split", default="dev")
     ap.add_argument("--n", type=int, default=20)
@@ -235,6 +333,8 @@ def main():
         agree(a.split, a.human)
     elif a.cmd == "s9check":
         s9check(a.split)
+    elif a.cmd == "s9apply":
+        s9apply(a.split)
     else:
         s9agree(a.split, a.human)
 

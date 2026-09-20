@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import subprocess
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -33,6 +34,54 @@ LANG = {"c1": "ja->ja", "c2": "ja->en", "c3": "ja->en", "c4": None}
 
 # Model training cutoff: S2 takes patches merged after it.
 CUTOFF = "2026-06-01"
+
+# Files written for tests: the tests themselves and the stand-ins they use
+# (fakes, mocks, stubs, test data, helpers). A question that says it leaves
+# tests out leaves these out too, and the gold of S3 and S7 is built the same
+# way, so that the words of the question and the gold say the same thing.
+# The list is closed on purpose: the question names it, so an answer can be
+# decided without reading this file.
+TEST_PATH = re.compile(r"""(?ix)
+      _test\.(go|c|py)$ | \.(test|spec)\.[jt]sx?$ | (^|/)test_[^/]+\.(c|py)$
+    | (^|/)(fake|mock|stub|dummy)[a-z0-9_]*\.(go|ts|tsx)$
+    | (^|/)[a-z0-9_]*_(fake|mock|stub)\.(go|ts|tsx)$
+    | (^|/)(test(s|ing|data|util|utils|helper|helpers|support|case|cases|fixtures)?
+           |fake|fakes|mock|mocks|stub|stubs|fixture|fixtures|__tests__|__mocks__|__fixtures__
+           |e2e|e2e-playwright|selftests|kunit)(/|$)
+""")
+# How the questions of S3 and S7 say which files they leave out.
+TEST_EXCL_JA = ("テストとテスト用の代用品のファイル（`_test.go`・`*.test.tsx` などの名前、"
+                "`testdata/`・`fakes/`・`mocks/`・`testing/` などの場所、"
+                "`mock`・`fake`・`stub` で始まるか `_mock.go`・`_fake.go` のように終わる名前のファイル）を除く")
+TEST_EXCL_EN_NOTE = "tests and their stand-ins (fakes, mocks, stubs, test data) are left out"
+
+
+def is_test_path(path):
+    """True for a test file or a file that exists to stand in for one."""
+    return bool(TEST_PATH.search(str(path)))
+
+
+_DROPPED = None
+
+
+def dropped_base_ids():
+    """Candidates whose gold an audit found wrong, or whose question the audit
+    found invalid (results/pe2-audit.jsonl). The generators skip them and draw
+    another candidate in their place, so a question that was thrown away does
+    not come back when the generators run again."""
+    global _DROPPED
+    if _DROPPED is None:
+        _DROPPED = set()
+        path = os.path.join(ROOT, "results", "pe2-audit.jsonl")
+        if os.path.exists(path):
+            last = {}
+            with open(path) as f:
+                for line in f:
+                    if line.strip():
+                        a = json.loads(line)
+                        last[a["base_id"]] = a["verdict"]
+            _DROPPED = {b for b, v in last.items() if v in ("error", "invalid")}
+    return _DROPPED
 
 
 def repo_dir(corpus, repo):

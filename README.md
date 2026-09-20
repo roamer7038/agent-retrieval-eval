@@ -22,7 +22,7 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `grade/` | 採点、費用の換算、集計 |
 | `docker/tools/`、`scripts/l0.py`、`scripts/l0_table.py` | L0（道具の導入と索引の測定）。道具ごとのイメージ、測定、表 |
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*` は正解の作り方と監査） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md` は正解の作り方と監査） |
 
 ## 使い方
 
@@ -55,14 +55,16 @@ scripts/l0_table.py                                                      # 道�
 
 ```sh
 ARE_DATA=... gen/analyze.sh all   # Go（go/packages・SSA・VTA）、TypeScript（コンパイラの構文解析）、C（clang でビルドした Linux を libclang で解析）
-ARE_DATA=... gen/run.sh dev       # 候補 → 言い換え・一意性の判定・英訳 → tasks/dev/pe2.jsonl
+ARE_DATA=... gen/run.sh dev       # 候補 → S9 の正解の選別 → 言い換え・一意性の判定・英訳 → tasks/dev/pe2.jsonl
+grade/selfcheck.py tasks/dev/pe2.jsonl /tmp/gradecheck   # 全問を採点できるかの確認（合成セッション）
 ```
 
 - 生成物（解析の結果、候補、LLM の応答のキャッシュ）は `$ARE_DATA/gold-work/` に置き、題材の作業ツリーには書かない。Linux は題材を読み取り専用でマウントしたコンテナの中で、別のディレクトリにビルドする。
 - 乱数は分割名（`dev`・`test`）と `gen/common.py` の `SEED` で決まり、項目の分割は項目の鍵のハッシュで決まる。本番用は事前登録の後に `gen/run.sh test` で同じ手順で作る。
 - 問題の各行は、識別子を含む質問と言い換えの対（`phrasing`）、英訳（`question_en`）、言語の組み合わせ（`lang`）、正解（`gold`）、根拠として認める範囲（`evidence`。末尾が `/` なら配下すべて。何を根拠と認めるかの説明は `evidence_rule`）、正解の状態（`gold_status`: 抜き取りで監査する `machine`、人の確認が要る `needs_review`）、監査の結果（`audit`）を持つ。正解の種類は `grade/grade.py` の冒頭に書いた。
-- 監査の記録は `results/pe2-audit.jsonl`。最後の監査で正解の誤り（`error`）か問題として成り立たない（`invalid`）とされた候補は、`gen/build.py` が問題に入れない。
-- LLM 判定者の試作は `gen/judge.py`（S4・S5 の自由記述の採点と、S9 の正解の点検）。PE2 の結果は `results/pe2-gold.md`。
+- 監査の記録は `results/pe2-audit.jsonl`。最後の監査で正解の誤り（`error`）か問題として成り立たない（`invalid`）とされた候補は、`gen/build.py` が問題に入れず、生成器も次に引くときに飛ばして別の候補を引く。
+- テストとテスト用の代用品を除く規則は `gen/common.py` の `TEST_PATH`（S3・S7 の正解と質問文が同じものを使う）。S2 の「主のファイル」の規則は `gen/cand_git.py` の `main_file`。
+- LLM 判定者の試作は `gen/judge.py`（S4・S5 の自由記述の採点と、S9 の正解の選別）。別系統のモデル 2 つで判定し、割れたものを `split` として残す。結果は `results/pe2-gold.md`（1 回目）と `results/pe2b.md`（作り直し）。
 
 ## ライセンス
 
