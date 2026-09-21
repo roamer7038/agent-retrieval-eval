@@ -12,7 +12,9 @@
 A session is one question under one condition, model and repetition, written
 to $ARE_RUNS (default ../agent-retrieval-eval-runs)/<label>/<question>-<cond>-<model>-r<rep>/:
 
-  meta.json      question, condition, model, versions, commits, times, exit
+  meta.json      question, condition, model, versions, commits, times, exit,
+                 and the sha256 of every question file, so that a session can
+                 be graded again from the record alone
   prompt.md      the prompt given to the agent
   stream.jsonl   Claude Code's stream-json output
   stderr.txt
@@ -47,6 +49,7 @@ its output resolve). Both are the same files.
 """
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import shutil
@@ -202,16 +205,39 @@ def sh(*args):
     return subprocess.run(list(args), check=True, capture_output=True, text=True).stdout.strip()
 
 
+def question_files():
+    out = []
+    for dirpath, _, files in os.walk(os.path.join(ROOT, "tasks")):
+        out += [os.path.join(dirpath, fn) for fn in sorted(files) if fn.endswith(".jsonl")]
+    return sorted(out)
+
+
 def load_questions():
     qs = {}
-    for dirpath, _, files in os.walk(os.path.join(ROOT, "tasks")):
-        for fn in sorted(files):
-            if fn.endswith(".jsonl"):
-                for line in read(os.path.join(dirpath, fn)).splitlines():
-                    if line.strip():
-                        q = json.loads(line)
-                        qs[q["id"]] = q
+    for path in question_files():
+        for line in read(path).splitlines():
+            if line.strip():
+                q = json.loads(line)
+                q["_file"] = os.path.relpath(path, ROOT)
+                qs[q["id"]] = q
     return qs
+
+
+def sha256_of(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def question_versions():
+    """問題ファイルの版。記録だけで採点し直せるように meta.json に入れる。
+
+    PE3b の L1 では記録に問題の版が無く、前の測定を採点し直せなかった
+    （results/pe3b-l1.md 第 3 節、第 11 節 #6）。
+    """
+    return {os.path.relpath(p, ROOT): sha256_of(p) for p in question_files()}
 
 
 def load_corpora():
@@ -471,6 +497,7 @@ def run_session(qid, cond, model, rep, label):
             "image": image, "image_id": sh("docker", "image", "inspect", "-f", "{{.Id}}", image),
             "claude_version": sh("docker", "run", "--rm", "--entrypoint", "claude", image, "--version"),
             "cpus": CPUS, "memory": memory_for(cond, q["corpus"]),
+            "question_file": q.get("_file"), "question_versions": question_versions(),
             "indexes": {t: index_dir(t, q["corpus"]) for t in cond_tools(cond)},
             "commits": {n: s["commit"] for n, s in corpora[q["corpus"]]["repos"].items()},
             "cmd": cmd, "started_at": now()}

@@ -23,10 +23,10 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `grade/` | 採点、費用の換算、集計 |
 | `docker/tools/`、`scripts/l0.py`、`scripts/l0_table.py` | L0（道具の導入と索引の測定）。道具ごとのイメージ、測定、表 |
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
-| `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`、最終版の問題での測り直しは `pe3b.sh`） |
+| `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、索引が持つファイルの種類と外す対比（`coverage.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`、最終版の問題での測り直しは `pe3b.sh`、質問の定型を識別子から外した測り直しは `pe3c.sh`） |
 | `harness/run.py` の `CONDS`・`TOOLS` | L2 の条件（A0〜A7）と、条件ごとの道具・渡し方・索引 |
 | `pe5/` | PE5（較正）。問題の層化抽出と無作為の順の駆動（`run.py`）、分散の成分と道具の使用率（`analyze.py`）、検出力（`power.py`）、MCP の握手の時間（`mcp_startup.py`） |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*` は正解の作り方と監査、`pe3-l1.*`・`pe3b-l1.*` は検索単体、`pe4-l2.*` は L2 の予備、`pe5*` は較正と事前登録の草案） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*` は正解の作り方と監査、`pe3-l1.*`・`pe3b-l1.*`・`pe3c-l1.*` は検索単体、`pe4-l2.*` は L2 の予備、`pe5*` は較正と事前登録の草案） |
 
 ## 使い方
 
@@ -52,10 +52,12 @@ scripts/l0.py run semble c3 --slot a --variant mem32g --memory 32g          # �
 scripts/l0_table.py                                                      # 道具 × 題材の表
 
 l1/pe3b.sh                                   # L1（検索単体）を全道具 × 全題材で測る。L0 の索引を使う
+l1/pe3c.sh                                   # 質問の定型を識別子から外したうえで S3・S7 を測り直す
+l1/tasks.py df                               # 定型とみなす識別子と、その閾値の根拠
 l1/run.py plan --md                          # 道具 × 題材の当てはまりと、外した理由
 l1/run.py run --tools zoekt,semble --corpora c1 --langs ja --slot a
 l1/grade.py table                            # 道具 × シナリオ（nDCG@10）
-l1/grade.py applicability                    # 当てはまりの表。compare・rep・spread・time・xlang・querylang もある
+l1/grade.py applicability                    # 当てはまりと外した対比の一覧。compare・compare3b・verify・rep・spread・time・xlang・querylang もある
 ```
 
 - モデルは `local:<名前>`（Ollama の Anthropic 互換 API。事前実験だけに使う）か `anthropic:<sonnet|opus|haiku>`（`~/.config/agent-retrieval-eval/oauth-token` の OAuth トークン）。
@@ -63,6 +65,9 @@ l1/grade.py applicability                    # 当てはまりの表。compare�
 - 記録は `../agent-retrieval-eval-runs/`（`$ARE_RUNS`）に書く。Claude Code は上位のディレクトリにある Git リポジトリの状態をシステムプロンプトに入れるので、Git リポジトリの外に置く。トランスクリプトを含むので公開しない。
 - L0 の測定は 1 回 8 vCPU・16GB・ネットワークなし、索引の作成と更新はそれぞれ 60 分が上限。計測枠（`--slot`）ごとに同時に 1 つだけ動く（ロックで待つ）。
 - L1 は L0 と同じ枠のロックを使い、道具を常駐させて 1 問ずつ検索する。検索の時間と立ち上げの時間を分けて記録する。規則（質問の変換・順位・打ち切り・同点）は `l1/tasks.py` と `l1/worker.py` の冒頭に書いてあり、そのまま事前登録に載せられる。
+- L1 の識別子の取り出しは、**多くの問に共通して現れる識別子を質問の定型として外す**（`l1/tasks.py` の `BOILERPLATE_MIN_DOCS`、既定は 10 問）。閾値は問題集合だけから機械的に決まるので事前登録できる。根拠は `l1/tasks.py df`。
+- **測定の記録には問題ファイルの版（sha256）と識別子の取り出しの規則を入れる**（L1 は各行の `tasks`、L2 は `meta.json` の `question_versions`）。記録だけで採点し直せるようにするため。
+- **索引に正解の種類のファイルが入らない対比は外す**（`l1/coverage.py`）。判断は索引の中身を数えて決める。系統の中で道具を比べるときは、両方が対比に使う問だけで比べる（外す規則が、索引しない道具を有利にしないため）。
 - ローカル LLM の結果の `total_cost_usd` は、未知のモデルに仮の単価を当てた値なので使わない（採点では USD を出さない）。
 - L2 の条件は A0（題材を渡さない）・A1（標準）・A2〜A7（A1 ＋ 系統の代表の道具 1 つ）。道具は本来の渡し方で渡す（CLI は PATH に、MCP は `--mcp-config` で）。索引は L0 が作ったものを下層にした overlay で渡すので、道具は書けるが索引そのものは変わらず、セッションの中では索引を作らない。
 - 題材の複製は `/corpus`（課題文が指す道具）と `/work`（索引を作ったときのパス）の両方に見える。同じファイルで、道具の出力は後者を指すことがある。
