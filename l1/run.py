@@ -111,6 +111,21 @@ NOT_APPLICABLE = {
     ("serena", "c4"): "言語サーバの対象なし",
     ("wikictl", "c2"): "文書の題材のみ", ("wikictl", "c3"): "文書の題材のみ",
 }
+# Cells that are measured but left out of the comparisons: the tool's index
+# holds no file of the kind the corpus's gold is made of, so the 0.000 there
+# says what the index covers and not how good the tool is (the decision of
+# 2026-09-20). c4's gold is Markdown throughout; the counts are of the index
+# PE1 built and are quoted in results/pe3b-l1.md.
+NOT_COMPARABLE = {
+    ("global", "c4"): "記号索引に文書が入らない（GTAGS が記号を持つ md は 4 件。GPATH の md 9,120 件には記号が付かない）",
+    ("semble", "c4"): "索引の塊 7,379 件に .md が 0 件（js・css・py・scss・go のみ）",
+    ("codegraph", "c4"): "索引したファイル 1,661 件に .md が 0 件",
+}
+# The same three tools index no Markdown in c1 either (semble 1,195/1,198 が
+# .go、codegraph 0/66、global の GTAGS は 4 件）, so c1 の S4・S5（文書の質問）も
+# 同じ理由で届かない。ここは統括の決定が c4 に限られているため対比からは外さず、
+# 報告で副次の集計として示す。
+DOC_BLIND = ("global", "semble", "codegraph")
 
 
 def repos(corpus):
@@ -206,6 +221,9 @@ def run(args):
             if corpus in TOOLS[tool]["corpora"]:
                 todo.append((tool, corpus))
     all_tasks = T.load()
+    if args.scenarios:
+        keep = set(args.scenarios.split(","))
+        all_tasks = [t for t in all_tasks if t["scenario"] in keep]
     langs = args.langs.split(",")
     os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
     with open(os.path.join(INDEXES, f".slot-{args.slot}.lock"), "w") as lock:
@@ -289,12 +307,13 @@ def main():
         if c == "sh":
             s.add_argument("argv", nargs=argparse.REMAINDER)
     sub.add_parser("ps")
-    sub.add_parser("plan")
+    sub.add_parser("plan").add_argument("--md", action="store_true", help="表の形で出す")
     r = sub.add_parser("run")
     r.add_argument("--tools", required=True)
     r.add_argument("--corpora", default="c1,c2,c3,c4")
     r.add_argument("--langs", default="ja,en")
     r.add_argument("--slot", choices=SLOTS, default="a")
+    r.add_argument("--scenarios", help="S3,S7 のように絞る（診断用）")
     r.add_argument("--k", type=int, default=50)
     r.add_argument("--limit", type=int)
     r.add_argument("--dry", action="store_true")
@@ -309,11 +328,32 @@ def main():
         subprocess.run(["docker", "ps", "--filter", "name=are-l1-", "--format",
                         "table {{.Names}}\t{{.Status}}\t{{.Image}}"])
     elif a.cmd == "plan":
+        if a.md:
+            print("| 道具 | 形 | c1 | c2 | c3 | c4 | 外した理由 |")
+            print("|---|---|:-:|:-:|:-:|:-:|---|")
+            for tool, spec in TOOLS.items():
+                marks, why = [], []
+                for c in ("c1", "c2", "c3", "c4"):
+                    if (tool, c) in NOT_COMPARABLE:
+                        marks.append("△")
+                        why.append(f"{c}: {NOT_COMPARABLE[(tool, c)]}")
+                    elif c in spec["corpora"]:
+                        marks.append("○")
+                    else:
+                        marks.append("―")
+                        why.append(f"{c}: {NOT_APPLICABLE.get((tool, c), '?')}")
+                print(f"| {tool} | {spec['form']} | " + " | ".join(marks) + " | " +
+                      "；".join(why) + " |")
+            print()
+            print("○ 測って対比に使う／△ 測るが対比から外す（索引に題材の答えの種類が無い）／― 組まない")
+            return
         for tool, spec in TOOLS.items():
             for c in ("c1", "c2", "c3", "c4"):
                 if c in spec["corpora"]:
                     x = spec["corpora"][c]
-                    print(f"{tool:20s} {c} form={spec['form']:5s} {x.get('variant') or '':8s} {x.get('note') or ''}")
+                    na = NOT_COMPARABLE.get((tool, c))
+                    print(f"{tool:20s} {c} form={spec['form']:5s} {x.get('variant') or '':8s} "
+                          f"{'対比から外す: ' + na if na else (x.get('note') or '')}")
                 else:
                     print(f"{tool:20s} {c} n/a   {NOT_APPLICABLE.get((tool, c), '?')}")
     else:
