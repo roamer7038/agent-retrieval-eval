@@ -23,9 +23,9 @@ Experiments comparing retrieval methods and tools for coding agents over Markdow
 | `grade/` | 採点、費用の換算、集計 |
 | `docker/tools/`、`scripts/l0.py`、`scripts/l0_table.py` | L0（道具の導入と索引の測定）。道具ごとのイメージ、測定、表 |
 | `gen/` | 問題と正解の生成（解析器、候補、言い換えと対訳、LLM 判定） |
-| `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`） |
+| `l1/` | L1（検索単体）。質問の変換と正解（`tasks.py`）、道具の常駐と実行（`run.py`・`worker.py`）、指標（`grade.py`）、予備の測定の手順（`pe3.sh`、最終版の問題での測り直しは `pe3b.sh`） |
 | `harness/run.py` の `CONDS`・`TOOLS` | L2 の条件（A0〜A7）と、条件ごとの道具・渡し方・索引 |
-| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体、`pe4-l2.md` はエージェント経由） |
+| `results/` | 事前実験の結果（`pe1-l0.*` は L0、`pe2-*`・`pe2b.md`・`pe2c.md` は正解の作り方と監査、`pe3-l1.*` は検索単体、`pe3b-l1.*` は最終版の問題での測り直し、`pe4-l2.md` はエージェント経由） |
 
 ## 使い方
 
@@ -50,10 +50,11 @@ scripts/l0.py run semble c3 --slot a --variant mem32g --memory 32g          # �
 
 scripts/l0_table.py                                                      # 道具 × 題材の表
 
-l1/pe3.sh                                    # L1（検索単体）を全道具 × 全題材で測る。L0 の索引を使う
-l1/run.py plan                               # 道具 × 題材の当てはまりと、外した理由
+l1/pe3b.sh                                   # L1（検索単体）を全道具 × 全題材で測る。L0 の索引を使う
+l1/run.py plan --md                          # 道具 × 題材の当てはまりと、外した理由
 l1/run.py run --tools zoekt,semble --corpora c1 --langs ja --slot a
-l1/grade.py table                            # 道具 × シナリオ（nDCG@10）。spread・time・xlang・querylang もある
+l1/grade.py table                            # 道具 × シナリオ（nDCG@10）
+l1/grade.py applicability                    # 当てはまりの表。compare・rep・spread・time・xlang・querylang もある
 ```
 
 - モデルは `local:<名前>`（Ollama の Anthropic 互換 API。事前実験だけに使う）か `anthropic:<sonnet|opus|haiku>`（`~/.config/agent-retrieval-eval/oauth-token` の OAuth トークン）。

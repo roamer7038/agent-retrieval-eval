@@ -47,6 +47,7 @@ its evidence.
 
 S6 and S8 are not part of L1 (plan v3.1).
 """
+import collections
 import json
 import os
 import re
@@ -96,6 +97,15 @@ CORPUS_WORDS = {"wikictl", "wiki", "grafana", "linux", "kubernetes", "website",
                 "k8s", "docs", "doc"}
 MAX_TERMS = 12
 
+# PE2d は「テストを除く」の規則を質問の本文に書き、除くファイル名の型を
+# バッククォートで並べた（`_test.go`・`mock`・`testdata` ...）。識別子の
+# 取り出しはその全部を拾うので、質問 1 つにつき識別子が 21 個になり、
+# 本当に問われている記号が最後に回る。これは答えではなく範囲の指示なので、
+# 「多くの問に共通して現れる識別子は質問の定型」とみなして外す診断を
+# 用意する。既定では外さない（事前登録した規則を変えるのは統括の決定）。
+BOILERPLATE_MIN_DOCS = 10
+DROP_BOILERPLATE = os.environ.get("ARE_L1_DROP_BOILERPLATE") == "1"
+
 
 def identifiers(question):
     """The identifiers of a question, in order, without repeats."""
@@ -115,8 +125,8 @@ def identifiers(question):
     return out
 
 
-def terms_ja(question):
-    out = list(identifiers(question))
+def terms_ja(question, drop=()):
+    out = [x for x in identifiers(question) if x not in drop]
     plain = BACKTICK.sub(" ", question)
     for tok in JA_RUN.findall(plain):
         if tok not in JA_STOP and tok not in out:
@@ -124,8 +134,8 @@ def terms_ja(question):
     return out[:MAX_TERMS]
 
 
-def terms_en(question_en):
-    out = list(identifiers(question_en))
+def terms_en(question_en, drop=()):
+    out = [x for x in identifiers(question_en) if x not in drop]
     plain = BACKTICK.sub(" ", question_en)
     for tok in EN_WORD.findall(plain):
         if tok.lower() in EN_STOP or len(tok) < 3:
@@ -137,13 +147,14 @@ def terms_en(question_en):
     return out[:MAX_TERMS]
 
 
-def forms(task):
+def forms(task, drop=()):
     """The three query forms of a task, per language."""
     q, qe = task["question"], task["question_en"]
+    keep = lambda xs: [x for x in xs if x not in drop]  # noqa: E731
     return {
-        "ident": identifiers(q) or identifiers(qe),
-        "terms_ja": terms_ja(q),
-        "terms_en": terms_en(qe),
+        "ident": keep(identifiers(q) or identifiers(qe)),
+        "terms_ja": terms_ja(q, drop),
+        "terms_en": terms_en(qe, drop),
         "nat_ja": unicodedata.normalize("NFKC", q),
         "nat_en": qe,
     }
@@ -192,6 +203,11 @@ def load(path=None, scenarios=L1_SCENARIOS):
             t["forms"] = forms(t)
             t["qrels"] = qrels(t)
             out.append(t)
+    if DROP_BOILERPLATE:
+        n = collections.Counter(tok for t in out for tok in set(t["forms"]["ident"]))
+        drop = {tok for tok, k in n.items() if k >= BOILERPLATE_MIN_DOCS}
+        for t in out:
+            t["forms"] = forms(t, drop)
     return out
 
 
