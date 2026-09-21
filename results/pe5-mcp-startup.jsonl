@@ -1,0 +1,28 @@
+{"cond": "A4", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 1, "servers": {"qmd": {"init_s": 0.211, "tools_s": 0.216, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1367, "ok": true}}, "corpus": "c1"}
+{"cond": "A4", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 2, "servers": {"qmd": {"init_s": 0.202, "tools_s": 0.207, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1367, "ok": true}}, "corpus": "c1"}
+{"cond": "A4", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 1, "servers": {"qmd": {"init_s": 0.23, "tools_s": 0.232, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1362, "ok": true}}, "corpus": "c2"}
+{"cond": "A4", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 2, "servers": {"qmd": {"init_s": 0.212, "tools_s": 0.215, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1362, "ok": true}}, "corpus": "c2"}
+{"cond": "A4", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 1, "servers": {"qmd": {"init_s": 0.458, "tools_s": 0.46, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1362, "ok": true}}, "corpus": "c4"}
+{"cond": "A4", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 2, "servers": {"qmd": {"init_s": 0.424, "tools_s": 0.426, "n_tools": 4, "tool_def_bytes": 6731, "instructions_bytes": 1362, "ok": true}}, "corpus": "c4"}
+{"cond": "A5", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 1, "servers": {"codebase-memory": {"init_s": 3.709, "tools_s": 3.72, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c1"}
+{"cond": "A5", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 2, "servers": {"codebase-memory": {"init_s": 3.642, "tools_s": 3.653, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c1"}
+{"cond": "A5", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 1, "servers": {"codebase-memory": {"init_s": 3.654, "tools_s": 3.665, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c2"}
+{"cond": "A5", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 2, "servers": {"codebase-memory": {"init_s": 3.593, "tools_s": 3.604, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c2"}
+{"cond": "A5", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 1, "servers": {"codebase-memory": {"init_s": 3.727, "tools_s": 3.739, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c4"}
+{"cond": "A5", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 2, "servers": {"codebase-memory": {"init_s": 3.681, "tools_s": 3.692, "n_tools": 17, "tool_def_bytes": 18622, "instructions_bytes": 270, "ok": true}}, "corpus": "c4"}
+{"cond": "A6", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 1, "servers": {"serena": {"init_s": 1.764, "tools_s": 1.765, "n_tools": 21, "tool_def_bytes": 26215, "instructions_bytes": 130, "ok": true}}, "corpus": "c1"}
+{"cond": "A6", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 2, "servers": {"serena": {"init_s": 1.717, "tools_s": 1.719, "n_tools": 21, "tool_def_bytes": 26215, "instructions_bytes": 130, "ok": true}}, "corpus": "c1"}
+{"cond": "A6", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 1, "servers": {"serena": {"init_s": 1.719, "tools_s": 1.721, "n_tools": 21, "tool_def_bytes": 26215, "instructions_bytes": 130, "ok": true}}, "corpus": "c2"}
+{"cond": "A6", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 2, "servers": {"serena": {"init_s": 1.731, "tools_s": 1.734, "n_tools": 21, "tool_def_bytes": 26215, "instructions_bytes": 130, "ok": true}}, "corpus": "c2"}
+{"cond": "A1", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 1, "servers": {}, "corpus": "c1"}
+{"cond": "A1", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 2, "servers": {}, "corpus": "c1"}
+{"cond": "A1", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 1, "servers": {}, "corpus": "c2"}
+{"cond": "A1", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 2, "servers": {}, "corpus": "c2"}
+{"cond": "A1", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 1, "servers": {}, "corpus": "c4"}
+{"cond": "A1", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 2, "servers": {}, "corpus": "c4"}
+{"cond": "A2", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 1, "servers": {}, "corpus": "c1"}
+{"cond": "A2", "question": "dev-c1-s1-go-Repo-Entries-ident", "rep": 2, "servers": {}, "corpus": "c1"}
+{"cond": "A2", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 1, "servers": {}, "corpus": "c2"}
+{"cond": "A2", "question": "dev-c2-s1-go-aggregateTargetConfig-ident", "rep": 2, "servers": {}, "corpus": "c2"}
+{"cond": "A2", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 1, "servers": {}, "corpus": "c4"}
+{"cond": "A2", "question": "dev-c4-s6-page-cs-concepts-cluster-administration-swap-memory-management-md-ident", "rep": 2, "servers": {}, "corpus": "c4"}
