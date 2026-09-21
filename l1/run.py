@@ -34,6 +34,7 @@ the same lock L0 used), so a search is never timed against another search.
 import argparse
 import datetime
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -42,6 +43,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import coverage as COV  # noqa: E402
 import tasks as T  # noqa: E402
 
 ROOT = T.ROOT
@@ -49,7 +51,7 @@ DATA = T.DATA
 CORPORA = T.CORPORA
 INDEXES = os.path.join(DATA, "indexes")
 L1 = os.path.join(ROOT, "l1")
-RESULTS = os.environ.get("ARE_L1_RESULTS", os.path.join(ROOT, "results", "pe3-l1.jsonl"))
+RESULTS = os.environ.get("ARE_L1_RESULTS", os.path.join(ROOT, "results", "pe3c-l1.jsonl"))
 CPUS = "8"
 SLOTS = {"a": "0-7", "b": "8-15", "c": "16-23"}
 
@@ -102,7 +104,8 @@ TOOLS = {
 # list of estimable contrasts).
 NOT_APPLICABLE = {
     ("cscope", "c1"): "C のみ", ("cscope", "c2"): "C のみ", ("cscope", "c4"): "C のみ",
-    ("ast-grep", "c4"): "コードのみ（c4 は文書）",
+    ("ast-grep", "c4"): "識別子のパターンでしか引けず、c4 の質問に識別子がほとんど無い"
+                        "（ast-grep は markdown のパーサを持つので「コードのみ」ではない）",
     ("qmd", "c3"): "Markdown のみ（c3 の文書は reStructuredText）",
     ("ck", "c2"): "L0 で索引が 60 分で終わらない", ("ck", "c3"): "L0 で索引が 60 分で終わらない",
     ("ck", "c4"): "L0 で索引が 60 分で終わらない",
@@ -111,21 +114,17 @@ NOT_APPLICABLE = {
     ("serena", "c4"): "言語サーバの対象なし",
     ("wikictl", "c2"): "文書の題材のみ", ("wikictl", "c3"): "文書の題材のみ",
 }
-# Cells that are measured but left out of the comparisons: the tool's index
-# holds no file of the kind the corpus's gold is made of, so the 0.000 there
-# says what the index covers and not how good the tool is (the decision of
-# 2026-09-20). c4's gold is Markdown throughout; the counts are of the index
-# PE1 built and are quoted in results/pe3b-l1.md.
-NOT_COMPARABLE = {
-    ("global", "c4"): "記号索引に文書が入らない（GTAGS が記号を持つ md は 4 件。GPATH の md 9,120 件には記号が付かない）",
-    ("semble", "c4"): "索引の塊 7,379 件に .md が 0 件（js・css・py・scss・go のみ）",
-    ("codegraph", "c4"): "索引したファイル 1,661 件に .md が 0 件",
-}
-# The same three tools index no Markdown in c1 either (semble 1,195/1,198 が
-# .go、codegraph 0/66、global の GTAGS は 4 件）, so c1 の S4・S5（文書の質問）も
-# 同じ理由で届かない。ここは統括の決定が c4 に限られているため対比からは外さず、
-# 報告で副次の集計として示す。
-DOC_BLIND = ("global", "semble", "codegraph")
+# Cells that are measured but left out of the comparisons whatever the
+# question: the tool's index holds no file of the kind the corpus's gold is
+# made of, so the 0.000 there says what the index covers and not how good the
+# tool is (the decision of 2026-09-20). c4's gold is Markdown throughout.
+#
+# PE3c applies the same rule question by question, and in both directions
+# (a tool that indexes only Markdown is left out of the code questions):
+# l1/coverage.py holds the counts and the rule, and the grading uses it. What
+# is left here is the c4 column of `plan`, which is that rule read for a whole
+# cell.
+NOT_COMPARABLE = {("global", "c4"), ("semble", "c4"), ("codegraph", "c4")}
 
 
 def repos(corpus):
@@ -225,6 +224,8 @@ def run(args):
         keep = set(args.scenarios.split(","))
         all_tasks = [t for t in all_tasks if t["scenario"] in keep]
     langs = args.langs.split(",")
+    prov = T.provenance()
+    print(json.dumps({"tasks": prov}, ensure_ascii=False), flush=True)
     os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
     with open(os.path.join(INDEXES, f".slot-{args.slot}.lock"), "w") as lock:
         try:
@@ -236,7 +237,7 @@ def run(args):
             with open(os.path.join(INDEXES, f".slot-{args.slot}.running"), "w") as f:
                 f.write(f"l1 {tool} {corpus}\n")
             try:
-                run_cell(tool, corpus, all_tasks, langs, args)
+                run_cell(tool, corpus, all_tasks, langs, args, prov)
             except Exception as e:
                 print(json.dumps({"tool": tool, "corpus": corpus, "error": repr(e)}), flush=True)
             finally:
@@ -247,8 +248,19 @@ def run(args):
             pass
 
 
-def run_cell(tool, corpus, all_tasks, langs, args):
+def compact_provenance(prov):
+    """記録の 1 行に入れる形。外した語の一覧そのものは長いので指紋にする。"""
+    r = prov["ident_rule"]
+    words = ",".join(r["dropped"])
+    return {"file": prov["file"], "sha256": prov["sha256"], "n_l1": prov["n_l1"],
+            "drop_boilerplate": r["drop_boilerplate"], "min_docs": r["min_docs"],
+            "n_dropped": len(r["dropped"]),
+            "dropped_sha256": hashlib.sha256(words.encode()).hexdigest()[:16]}
+
+
+def run_cell(tool, corpus, all_tasks, langs, args, prov=None):
     spec = TOOLS[tool]
+    tasks_rec = compact_provenance(prov or T.provenance())
     form = spec["form"]
     qs = [t for t in all_tasks if t["corpus"] == corpus]
     if args.limit:
@@ -272,7 +284,7 @@ def run_cell(tool, corpus, all_tasks, langs, args):
                        "phrasing": t["phrasing"], "task_lang": t["lang"], "query": q,
                        "paths": r.get("paths", []), "t_s": r.get("t_s"), "exec_s": exec_s,
                        "n_raw": r.get("n_raw"), "err": r.get("err"), "startup": startup,
-                       "slot": args.slot, "k": args.k,
+                       "slot": args.slot, "k": args.k, "tasks": tasks_rec,
                        "date": datetime.datetime.now().astimezone().isoformat(timespec="seconds")}
                 if not args.dry:
                     with open(RESULTS, "a") as f:
@@ -336,7 +348,7 @@ def main():
                 for c in ("c1", "c2", "c3", "c4"):
                     if (tool, c) in NOT_COMPARABLE:
                         marks.append("△")
-                        why.append(f"{c}: {NOT_COMPARABLE[(tool, c)]}")
+                        why.append(f"{c}: 全問 {COV.reason(tool, c)}")
                     elif c in spec["corpora"]:
                         marks.append("○")
                     else:
@@ -351,7 +363,7 @@ def main():
             for c in ("c1", "c2", "c3", "c4"):
                 if c in spec["corpora"]:
                     x = spec["corpora"][c]
-                    na = NOT_COMPARABLE.get((tool, c))
+                    na = COV.reason(tool, c) if (tool, c) in NOT_COMPARABLE else None
                     print(f"{tool:20s} {c} form={spec['form']:5s} {x.get('variant') or '':8s} "
                           f"{'対比から外す: ' + na if na else (x.get('note') or '')}")
                 else:

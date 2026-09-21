@@ -18,6 +18,10 @@ question.
          A backticked span that names a path (it holds a "/") is skipped:
          the question gives it to the reader as a locator, not as the
          symbol being asked about.
+         An identifier that appears in BOILERPLATE_MIN_DOCS or more of the
+         questions is boilerplate of the question template (the list of
+         file-name patterns that says which files to leave out) rather than
+         the symbol being asked about, and is dropped: see `boilerplate`.
          A question without an identifier gives an empty form: a tool that
          takes only identifiers then returns nothing (recorded as
          empty_query, and reported as a property of the tool, not as a
@@ -48,6 +52,7 @@ its evidence.
 S6 and S8 are not part of L1 (plan v3.1).
 """
 import collections
+import hashlib
 import json
 import os
 import re
@@ -56,6 +61,7 @@ import unicodedata
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.environ.get("ARE_DATA", os.path.join(ROOT, "data"))
 CORPORA = os.path.join(DATA, "corpora")
+TASKS = os.path.join(ROOT, "tasks", "dev", "pe2.jsonl")
 
 L1_SCENARIOS = ("S1", "S2", "S3", "S4", "S5", "S7", "S9")
 
@@ -101,10 +107,15 @@ MAX_TERMS = 12
 # バッククォートで並べた（`_test.go`・`mock`・`testdata` ...）。識別子の
 # 取り出しはその全部を拾うので、質問 1 つにつき識別子が 21 個になり、
 # 本当に問われている記号が最後に回る。これは答えではなく範囲の指示なので、
-# 「多くの問に共通して現れる識別子は質問の定型」とみなして外す診断を
-# 用意する。既定では外さない（事前登録した規則を変えるのは統括の決定）。
-BOILERPLATE_MIN_DOCS = 10
-DROP_BOILERPLATE = os.environ.get("ARE_L1_DROP_BOILERPLATE") == "1"
+# 「多くの問に共通して現れる識別子は質問の定型」とみなして外す（PE3c）。
+#
+# 閾値は問題集合から機械的に決まるので事前登録できる。BOILERPLATE_MIN_DOCS
+# 問以上に現れる識別子を定型とする。現在の 284 問では定型の 20 語が 35 問
+# ちょうどに現れ、本物の記号で最も多いものは 5 問（`Repo`）なので、6 以上
+# 35 以下のどの閾値でも同じ 20 語が選ばれる（`l1/tasks.py df` が分布を出す）。
+BOILERPLATE_MIN_DOCS = int(os.environ.get("ARE_L1_BOILERPLATE_MIN_DOCS", "10"))
+# PE3b の測定（規則を入れる前）を再現するための逃げ道。既定は外す。
+DROP_BOILERPLATE = os.environ.get("ARE_L1_DROP_BOILERPLATE", "1") == "1"
 
 
 def identifiers(question):
@@ -192,28 +203,113 @@ def qrels(task):
     return sorted(set(rel))
 
 
+def doc_freq(tasks):
+    """識別子ごとの「その識別子が現れる問の数」。定型の判定の材料。"""
+    return collections.Counter(tok for t in tasks for tok in set(t["forms"]["ident"]))
+
+
+def boilerplate(tasks, min_docs=BOILERPLATE_MIN_DOCS):
+    """質問の定型とみなす識別子の集合。
+
+    問題集合だけから機械的に決まる（道具も測定結果も使わない）ので、
+    事前登録できる。min_docs 問以上に現れる識別子を定型とする。
+    """
+    return {tok for tok, k in doc_freq(tasks).items() if k >= min_docs}
+
+
 def load(path=None, scenarios=L1_SCENARIOS):
-    path = path or os.path.join(ROOT, "tasks", "dev", "pe2.jsonl")
-    out = []
+    """L1 の問。定型の判定は **L1 の全問**で行う（--scenarios で絞っても同じ）。"""
+    path = path or TASKS
+    all_l1 = []
     with open(path) as f:
         for line in f:
+            if not line.strip():
+                continue
             t = json.loads(line)
-            if t["scenario"] not in scenarios:
+            if t["scenario"] not in L1_SCENARIOS:
                 continue
             t["forms"] = forms(t)
-            t["qrels"] = qrels(t)
-            out.append(t)
-    if DROP_BOILERPLATE:
-        n = collections.Counter(tok for t in out for tok in set(t["forms"]["ident"]))
-        drop = {tok for tok, k in n.items() if k >= BOILERPLATE_MIN_DOCS}
-        for t in out:
+            all_l1.append(t)
+    drop = boilerplate(all_l1) if DROP_BOILERPLATE else set()
+    out = []
+    for t in all_l1:
+        if drop:
             t["forms"] = forms(t, drop)
+        if t["scenario"] not in scenarios:
+            continue
+        t["qrels"] = qrels(t)
+        out.append(t)
     return out
 
 
-if __name__ == "__main__":
-    import collections
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def provenance(path=None):
+    """記録に添える、問題ファイルの版と識別子の取り出しの規則。
+
+    PE3b の記録には問題ファイルの版が入っておらず、前回の測定を採点し直す
+    ことができなかった（pe3b-l1.md 第 3 節）。以後はこれを毎回の記録に持たせる。
+    """
+    path = path or TASKS
+    all_l1 = []
+    with open(path) as f:
+        for line in f:
+            if line.strip():
+                t = json.loads(line)
+                if t["scenario"] in L1_SCENARIOS:
+                    t["forms"] = forms(t)
+                    all_l1.append(t)
+    drop = sorted(boilerplate(all_l1)) if DROP_BOILERPLATE else []
+    return {"file": os.path.relpath(path, ROOT), "sha256": sha256(path),
+            "n_l1": len(all_l1),
+            "ident_rule": {"drop_boilerplate": DROP_BOILERPLATE,
+                           "min_docs": BOILERPLATE_MIN_DOCS if DROP_BOILERPLATE else None,
+                           "dropped": drop}}
+
+
+def _df_report():
+    """定型の閾値の根拠: 識別子が現れる問の数の分布と、閾値を動かした結果。"""
     import sys
+    all_l1 = []
+    with open(TASKS) as f:
+        for line in f:
+            if line.strip():
+                t = json.loads(line)
+                if t["scenario"] in L1_SCENARIOS:
+                    t["forms"] = forms(t)
+                    all_l1.append(t)
+    n = doc_freq(all_l1)
+    print(f"L1 {len(all_l1)} 問、異なり識別子 {len(n)} 語\n")
+    print("| 現れる問の数 | 識別子の数 | 識別子 |")
+    print("|---|--:|---|")
+    for k in sorted(set(n.values()), reverse=True):
+        w = sorted(t for t, v in n.items() if v == k)
+        print(f"| {k} | {len(w)} | " + "・".join(f"`{x}`" for x in (w if len(w) <= 20 else w[:8] + ["…"])) + " |")
+    print()
+    print("| 閾値（この問数以上で定型） | 外れる語 | 識別子が変わる問 |")
+    print("|---:|--:|--:|")
+    for m in (2, 3, 4, 5, 6, 10, 20, 35, 36):
+        drop = {t for t, v in n.items() if v >= m}
+        ch = sum(1 for t in all_l1 if forms(t, drop)["ident"] != t["forms"]["ident"])
+        print(f"| {m} | {len(drop)} | {ch} |")
+    print(f"\n既定の閾値 {BOILERPLATE_MIN_DOCS}: 外す語 "
+          + "・".join(f"`{x}`" for x in sorted(boilerplate(all_l1))), file=sys.stdout)
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "df":
+        _df_report()
+        raise SystemExit(0)
+    if len(sys.argv) > 1 and sys.argv[1] == "provenance":
+        print(json.dumps(provenance(), ensure_ascii=False, indent=1))
+        raise SystemExit(0)
     ts = load()
     print(f"{len(ts)} tasks for L1", file=sys.stderr)
     n_empty = collections.Counter()
